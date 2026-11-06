@@ -28,7 +28,7 @@
             --logoSize: 156px;
             --playRight: 80px;
             --playBottom: 80px;
-            --hoverTextShift: 140px;
+            --hoverTextShift: 0px; /* le voile se rétracte au survol : le texte reste en place */
             --clickTextExitX: 320px;
             --clickFadeMs: 320ms;
             --logoMoveMs: 420ms;
@@ -718,14 +718,17 @@
             pointer-events: none;
             visibility: hidden;
         }
-        /* PC: forme floue — deux états : base (1400px) → hover (2400px).
-           Seule la width change entre les deux. */
+        /* PC: voile flou — base : pleine page ; survol du Play : se rétracte à ~demi-page.
+           La couche fait 200vw de large et glisse en translateX : seul `transform` est animé,
+           donc l'animation tourne sur le compositeur GPU (pas de layout ni de re-flou de la largeur).
+           Le masque est solide jusqu'à 100vw puis s'efface sur 34vw avec une courbe douce
+           (stops "eased") au lieu d'un dégradé linéaire : pas de bord visible entre flou et net. */
         #welcome-screen::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
-            width: var(--blur-width, 1400px);
+            width: 200vw;
             height: 100%;
             background: rgba(0,0,0, var(--blur-bg-opacity, 0.55));
             backdrop-filter: blur(var(--blur-amount, 32px));
@@ -733,20 +736,27 @@
             border-radius: 0;
             z-index: 1;
             pointer-events: none;
-            -webkit-mask-image: linear-gradient(to right, black var(--blur-mask-stop, 65%), transparent 100%);
-            mask-image: linear-gradient(to right, black var(--blur-mask-stop, 65%), transparent 100%);
-            transform: translateX(var(--blur-tx, 0px));
+            --blur-feather: linear-gradient(to right,
+                #000 0, #000 100vw,
+                rgba(0,0,0,0.98) 103.4vw, rgba(0,0,0,0.93) 106.8vw,
+                rgba(0,0,0,0.84) 110.2vw, rgba(0,0,0,0.72) 113.6vw,
+                rgba(0,0,0,0.58) 117vw,   rgba(0,0,0,0.43) 120.4vw,
+                rgba(0,0,0,0.29) 123.8vw, rgba(0,0,0,0.17) 127.2vw,
+                rgba(0,0,0,0.07) 130.6vw, transparent 134vw);
+            -webkit-mask-image: var(--blur-feather);
+            mask-image: var(--blur-feather);
+            transform: translate3d(0, 0, 0);
             will-change: transform, opacity;
             transition:
-                width var(--blur-tr-dur, 0.7s) var(--blur-tr-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+                transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
                 opacity var(--clickFadeMs) ease;
         }
+        /* Bord net à mi-page, mais jamais avant la fin de la colonne de texte (+ marge) */
         body.hoverPlay #welcome-screen::before {
-            width: var(--hover-width, 2400px);
+            transform: translate3d(calc(max(50vw, var(--textLeft) + var(--textColW) + var(--hoverTextShift) + 40px) - 100vw), 0, 0);
         }
         body.clickedPlay #welcome-screen::before {
             opacity: 0;
-            width: var(--hover-width, 2400px);
         }
         #welcome-video-bg {
             position: absolute;
@@ -954,51 +964,57 @@
             transition: opacity 0.5s ease;
         }
 
-        .welcome-logo,
-        .welcome-logo-video,
-        .welcome-logo-poulpe {
+        /* ═══ Logo Dumbo — SVG vectoriel en calques, animé UNIQUEMENT en transform ═══
+           Chaque calque (nageoire haute, nageoire basse, corps) est une div qui contient son SVG.
+           Les animations CSS de transform sur des éléments HTML tournent sur le compositeur GPU :
+           elles restent fluides même quand le JS est saturé (génération des particules au chargement).
+           Remplace l'ancienne vidéo MP4 redessinée dans un canvas à chaque frame. */
+        .welcome-logo-container { overflow: visible; }
+        .dumbo-logo,
+        .dumbo-logo .dl-layer {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
+        }
+        .dumbo-logo .dl-layer {
+            will-change: transform;
+            animation-duration: var(--dl-period, 3.6s);
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+        }
+        .dumbo-logo svg {
+            display: block;
             width: 100%;
             height: 100%;
-            object-fit: contain;
-        }
-        /* Screen blend: le noir de la vidéo mp4 disparaît contre l'arrière-plan */
-        .welcome-logo-container {
-            mix-blend-mode: screen;
             overflow: visible;
+            fill: #fff;
         }
+        .dumbo-logo .dl-drift   { animation-name: dlDrift; }
+        .dumbo-logo .dl-fin-top { animation-name: dlFinTop; transform-origin: 41% 27%; }
+        .dumbo-logo .dl-fin-low { animation-name: dlFinLow; transform-origin: 20% 61%; }
+        .dumbo-logo .dl-body    { animation-name: dlBody;   transform-origin: 52% 58%; }
+        /* Au clic sur Play : le poulpe nage (cycle plus rapide) pendant le chargement */
+        body.clickedPlay .dumbo-logo,
+        .welcome-logo-container.detached .dumbo-logo { --dl-period: 1.15s; }
 
-        /* PC: poulpe video hidden — rendered to high-res canvas by JS for crisp screen blend */
-        .welcome-logo-poulpe-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            filter: contrast(1.12) brightness(1.08);
+        @keyframes dlDrift {
+            0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+            50%      { transform: translate3d(-3%, -4%, 0) rotate(-2deg); }
         }
-
-        .welcome-logo {
-            transition: opacity 0.2s ease;
+        @keyframes dlFinTop {
+            0%, 100% { transform: rotate(0deg); }
+            50%      { transform: rotate(-16deg); }
         }
-
-        .welcome-logo-video {
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
+        @keyframes dlFinLow {
+            0%, 100% { transform: rotate(0deg); }
+            50%      { transform: rotate(13deg); }
         }
-
-        .welcome-logo-video.active {
-            opacity: 1;
+        @keyframes dlBody {
+            0%, 100% { transform: scale(1, 1); }
+            50%      { transform: scale(1.025, 0.975); }
         }
-
-        /* Poulpe MP4 sur tous les devices, cacher PNG/WEBM mobile */
-        .welcome-logo-mobile { display: none; }
-        .welcome-logo-poulpe { display: block; }
-        .loading-video-mobile { display: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .dumbo-logo .dl-layer { animation: none; }
+        }
 
         /* Pause Screen - Ultra Modern */
         #pause-screen {
@@ -2302,6 +2318,140 @@
             background: rgba(255,160,60,0.3);
             border-color: rgba(255,160,60,0.6);
         }
+
+        /* ═══════════════════════════════════════════════════════════════
+           HARMONISATION — boutons, icône son, lisibilité, interface ×1.25
+           (bloc final : surcharge volontairement les règles plus haut)
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* ── Boutons : repos sombre · survol = grossit + blanc · clic/appui = bleu ──
+           Le bleu n'apparaît jamais au repos ; l'état (son coupé, plein écran…)
+           se lit dans l'icône, pas dans la couleur. */
+        :root {
+            --btn-ink: #0b0d1a;
+            --btn-blue: rgba(100,150,255,0.85);
+            --btn-blue-border: rgba(150,185,255,1);
+        }
+        .mute-button, .pause-close-btn, .lang-button,
+        #mobile-pause-btn, #mobile-fullscreen-btn, #gyro-toggle-btn, #manual-toggle-btn,
+        #mobile-pause-btn.active-infos, #mobile-fullscreen-btn.active-state,
+        .mute-button.active-state, .pause-close-btn.active-state, .lang-button.active-state {
+            background: rgba(0,0,0,0.55) !important;
+            border: 1px solid rgba(255,255,255,0.18) !important;
+            color: #fff !important;
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+                        background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
+        }
+        /* Mode choisi (gyroscope / manuel) : contour blanc, pas de bleu */
+        #gyro-toggle-btn.mode-active, #manual-toggle-btn.mode-active {
+            background: rgba(0,0,0,0.55) !important;
+            border: 1.5px solid rgba(255,255,255,0.9) !important;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .mute-button:hover, .pause-close-btn:hover, .lang-button:hover,
+            #mobile-pause-btn:hover, #mobile-fullscreen-btn:hover, #gyro-toggle-btn:hover, #manual-toggle-btn:hover {
+                transform: scale(1.15);
+                background: #fff !important;
+                border-color: #fff !important;
+                color: var(--btn-ink) !important;
+            }
+        }
+        .mute-button:active, .pause-close-btn:active, .lang-button:active,
+        #mobile-pause-btn:active, #mobile-fullscreen-btn:active, #gyro-toggle-btn:active, #manual-toggle-btn:active {
+            transform: scale(0.94) !important;
+            background: var(--btn-blue) !important;
+            border-color: var(--btn-blue-border) !important;
+            color: #fff !important;
+            transition-duration: 0.08s !important;
+        }
+
+        /* Bouton Play : même règle (blob blanc translucide au repos, blanc au survol, bleu au clic) */
+        .play-button-container .play-rond {
+            filter: brightness(0) invert(1);
+            opacity: 0.16;
+            transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.25s ease, filter 0.15s ease;
+        }
+        .play-button-container .play-fleche { transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1), filter 0.2s ease; }
+        body.hoverPlay .play-button-container .play-rond { opacity: 1; }
+        body.hoverPlay .play-button-container .play-fleche { filter: brightness(0); }
+        .play-button-container:active .play-rond { filter: none; opacity: 1; }
+        .play-button-container:active .play-fleche { filter: none; }
+
+        /* ── Icône son : coupé = les barres s'aplatissent en une barre plate ── */
+        #sound-waves {
+            transform-box: fill-box;
+            transform-origin: center;
+            transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .mute-button.active-state #sound-waves { transform: scaleY(0.08); }
+
+        /* ── Badges de touches ── */
+        .instruction-line .key.key-wide { font-size: 11px; padding: 6px 7px; letter-spacing: 0.2px; }
+        body.mac-keys .instruction-line { grid-template-columns: 64px 1fr; }
+
+        /* ── Textes : notes + méta + crédits sans <br> ── */
+        .welcome-note {
+            font-family: var(--font-sans);
+            font-size: 13px;
+            font-weight: 300;
+            line-height: 1.55;
+            color: rgba(255,255,255,0.7);
+            margin-top: 6px;
+        }
+        .welcome-note-name { font-weight: 500; color: rgba(255,255,255,0.9); }
+        .pause-meta span, .pause-credits span { display: block; }
+        .pause-credits { font-style: normal; line-height: 1.6; color: rgba(255,255,255,0.4); }
+
+        /* ── Ordinateur : toute l'interface ×1.25 + texte plus lisible ──
+           Les tailles de texte sont plafonnées par la hauteur d'écran (vh)
+           pour que l'accueil tienne sans défilement sur les petits portables. */
+        @media (min-width: 769px) and (pointer: fine) {
+            :root {
+                --textLeft: 290px;
+                --textColW: 600px;
+                --logoSize: 195px;
+                --playRight: 90px;
+                --playBottom: 90px;
+            }
+            .welcome-content { max-width: 600px; }
+            .welcome-project-name { font-size: min(80px, 8.5vh); letter-spacing: 15px; -webkit-text-stroke: 1.4px currentColor; }
+            .welcome-title { font-size: min(27px, 3vh); letter-spacing: 2px; margin-bottom: min(32px, 3.4vh); }
+            .welcome-text {
+                font-size: min(18px, 2.05vh);
+                font-weight: 400;
+                line-height: 1.62;
+                color: rgba(255,255,255,0.86);
+                margin-bottom: 0.95em;
+                letter-spacing: 0.1px;
+                text-wrap: pretty;
+                hyphens: manual;
+            }
+            .welcome-note { font-size: min(15px, 1.75vh); }
+            .welcome-context { font-size: min(13.5px, 1.6vh); margin-top: 1.2em; padding-top: 1.2em; }
+
+            .play-button-container { width: 200px; height: 200px; }
+            .play-button-container .play-rond { width: 200px; height: 200px; }
+            .play-button-container .play-fleche { width: 66px; height: 88px; }
+
+            .pause-content { max-width: 880px; padding: 60px; }
+            .pause-title { font-size: 22px; margin-bottom: 22px; }
+            .pause-text {
+                font-size: 17.5px;
+                font-weight: 400;
+                line-height: 1.65;
+                color: rgba(255,255,255,0.88);
+                margin-bottom: 0.9em;
+                text-wrap: pretty;
+            }
+            .pause-meta { font-size: 12.5px; }
+            .pause-credits { font-size: 13.5px; }
+
+            /* Instructions et boutons fixes : agrandis proportionnellement */
+            .persistent-instructions, .game-instructions, .pause-instructions,
+            .pause-controls, .pause-close-btn, .pause-credits {
+                zoom: 1.25;
+            }
+        }
     </style>
 </head>
 <body>
@@ -2438,7 +2588,7 @@
             <img class="instruction-svg" src="img/icone-scroll.svg" width="40" height="40" alt="Scroll">
             <span data-fr="Avancer / Reculer" data-en="Forward / Backward">Avancer / Reculer</span>
         </div>
-        <div class="instruction-line secondary">
+        <div class="instruction-line secondary esc-fs-instr">
             <span class="key">ESC</span>
             <span data-fr="Quitter le plein écran" data-en="Exit fullscreen">Quitter le plein écran</span>
         </div>
@@ -2458,30 +2608,31 @@
         <div id="welcome-fade-overlay"></div>
 
         <div class="welcome-logo-container" id="welcome-logo-container">
-            <!-- Mobile: static PNG logo + animated webm loading icon -->
-            <img src="img/presences_rares_logo.png" alt="Logo" class="welcome-logo welcome-logo-mobile" id="welcome-logo">
-            <video class="welcome-logo-video welcome-logo-mobile" id="welcome-logo-video" loop muted playsinline preload="auto">
-                <source src="videos/dumbo_icone_chargement.webm" type="video/webm">
-            </video>
-            <!-- Desktop: poulpe video paused at frame 1 (logo) → plays as loading icon -->
-            <video class="welcome-logo-poulpe" id="welcome-logo-poulpe" loop muted playsinline preload="auto">
-                <source src="videos/poulpe_icone_chargement_desktop.mp4" type="video/mp4">
-            </video>
+            <!-- Logo Dumbo vectoriel en calques (nageoires derrière, corps devant), animé en CSS -->
+            <div class="dumbo-logo" role="img" aria-label="Dumbo">
+                <div class="dl-layer dl-drift">
+                    <div class="dl-layer dl-fin-top"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M228 160 C250 120 262 70 246 36 C222 22 192 50 176 110 C172 134 196 156 228 160 Z"/></svg></div>
+                    <div class="dl-layer dl-fin-low"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M72 296 C46 322 18 346 8 366 C40 378 92 370 124 350 C120 320 100 296 72 296 Z"/></svg></div>
+                    <div class="dl-layer dl-body"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M176 110 C120 112 62 150 48 210 C42 250 56 282 72 296 C92 318 108 336 124 350 C170 400 250 450 340 466 C360 470 384 466 400 456 Q420 470 436 444 Q466 446 462 410 Q494 400 480 366 Q512 348 496 312 C478 262 440 220 400 210 C340 196 270 196 232 152 C216 128 198 112 176 110 Z"/></svg></div>
+                </div>
+            </div>
         </div>
 
         <div class="welcome-content" id="welcome-content">
             <span class="welcome-project-name">DUMBO</span>
             <h1 class="welcome-title">
-                <span data-fr="Présences aquatiques rares" data-en="Rare Aquatic Presences">Présences aquatiques rares</span>
+                <span data-fr="Présences aquatiques rares" data-en="Rare aquatic presences">Présences aquatiques rares</span>
             </h1>
 
-            <p class="welcome-text" data-fr="À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus." data-en="At great depth, light no longer penetrates. What remains is a residual luminance, diffuse, carried by the water itself. The organisms that live there were never meant to be seen.">À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus.</p>
+            <p class="welcome-text" data-fr="À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus." data-en="At great depth, light no longer reaches. What remains is a residual, diffuse luminance carried by the water itself. The organisms that live there were never meant to be seen.">À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus.</p>
 
-            <p class="welcome-text" data-fr="Ces captations viennent d'engins téléopérés descendus à des milliers de mètres, dans des conditions de turbidité et de pression où l'image devient un document autant qu'une limite. On y voit des céphalopodes, des poissons cartilagineux, des silhouettes que les projecteurs du submersible tirent brièvement de l'obscurité." data-en="These captures come from there. Remotely operated vehicles descended to thousands of meters, in conditions of turbidity and pressure where the image becomes a document as much as a limit. One sees cephalopods, cartilaginous fish, silhouettes that the submersible's lights briefly pull from the darkness.">Ces captations viennent d'engins téléopérés descendus à des milliers de mètres, dans des conditions de turbidité et de pression où l'image devient un document autant qu'une limite. On y voit des céphalopodes, des poissons cartilagineux, des silhouettes que les projecteurs du submersible tirent brièvement de l'obscurité.</p>
+            <p class="welcome-text" data-fr="Ces captations viennent d'engins téléopérés descendus à des milliers de mètres, dans des conditions de turbidité et de pression où l'image devient autant un document qu'une limite. On y voit des céphalopodes, des poissons cartilagineux, des silhouettes que les projecteurs du submersible tirent brièvement de l'obscurité." data-en="These recordings come from remotely operated vehicles sent thousands of metres down, where turbidity and pressure make the image as much a document as a limit. They show cephalopods, cartilaginous fish, and silhouettes briefly pulled from the darkness by the submersible's lights.">Ces captations viennent d'engins téléopérés descendus à des milliers de mètres, dans des conditions de turbidité et de pression où l'image devient autant un document qu'une limite. On y voit des céphalopodes, des poissons cartilagineux, des silhouettes que les projecteurs du submersible tirent brièvement de l'obscurité.</p>
 
-            <p class="welcome-text" data-fr="Ce projet les traduit en volumes. La luminance de chaque image, porteuse des conditions d'éclairage du milieu, détermine le relief des formes exposées. Pas de reconstitution. Pas de fiction. Une tentative de donner du poids à ce qui résiste à l'image." data-en="This project translates them into volumes. The luminance of each image, carrying the lighting conditions of the environment, determines the relief of the exposed forms. No reconstruction. No fiction. An attempt to give weight to what resists the image.">Ce projet les traduit en volumes. La luminance de chaque image, porteuse des conditions d'éclairage du milieu, détermine le relief des formes exposées. Pas de reconstitution. Pas de fiction. Une tentative de donner du poids à ce qui résiste à l'image.<br><br><i style="font-size:0.88em;line-height:1.275;display:inline-block;letter-spacing:0.16px"><span data-fr="Dumbo : Grimpoteuthis spp. Pieuvres abyssales à nageoires. 1000–7000 m. Parmi les rares créatures des grands fonds à être entrées dans l'imaginaire collectif." data-en="Dumbo: Grimpoteuthis spp. Abyssal finned octopuses. 1000–7000 m. Among the rare deep-sea creatures to have entered the collective imagination."><span style="font-weight:200">Dumbo</span><span style="font-weight:100"> : Grimpoteuthis spp. Pieuvres abyssales à nageoires. 1000–7000 m. Parmi les rares créatures des grands fonds à être entrées dans l'imaginaire collectif.</span></span></i></p>
+            <p class="welcome-text" data-fr="Ce projet les traduit en volumes. La luminance de chaque image, porteuse des conditions d'éclairage du milieu, détermine le relief des formes exposées. Pas de reconstitution. Pas de fiction. Une tentative de donner du poids à ce qui résiste à l'image." data-en="This project translates them into volumes. The luminance of each image, which carries the lighting conditions of the environment, shapes the relief of the exposed forms. No reconstruction. No fiction. An attempt to give weight to what resists the image.">Ce projet les traduit en volumes. La luminance de chaque image, porteuse des conditions d'éclairage du milieu, détermine le relief des formes exposées. Pas de reconstitution. Pas de fiction. Une tentative de donner du poids à ce qui résiste à l'image.</p>
 
-            <div class="welcome-context" data-fr="Ressources visuelles issues de captations scientifiques réelles." data-en="Visual resources from real scientific captures.">Ressources visuelles issues de captations scientifiques réelles.</div>
+            <p class="welcome-note"><span class="welcome-note-name">Dumbo</span> · <i>Grimpoteuthis</i> spp. · <span data-fr="Pieuvres abyssales à nageoires, de 1 000 à 7 000 m. L'une des rares créatures des grands fonds entrées dans l'imaginaire collectif." data-en="Finned abyssal octopuses, from 1,000 to 7,000 m. One of the few deep-sea creatures to have entered the collective imagination.">Pieuvres abyssales à nageoires, de 1 000 à 7 000 m. L'une des rares créatures des grands fonds entrées dans l'imaginaire collectif.</span></p>
+
+            <div class="welcome-context" data-fr="Ressources visuelles issues de captations scientifiques réelles." data-en="Visual material from real scientific recordings.">Ressources visuelles issues de captations scientifiques réelles.</div>
           </div>
 
         <!-- Bouton Play mobile: déplacé dans welcome-content par JS en portrait -->
@@ -2529,11 +2680,17 @@
         <div class="pause-content" onclick="event.stopPropagation()">
             <h2 class="pause-title" data-fr="À propos de ce projet" data-en="About this project">À propos de ce projet</h2>
 
-            <p class="pause-text" data-fr="Ces formes ont été captées à des centaines de mètres de profondeur, dans des conditions lumineuses que l'œil humain ne rencontre jamais directement.<br><br>Ce que vous observez ici n'est ni une reconstitution fidèle, ni une création fictionnelle : c'est le résultat d'un protocole de traduction où la luminance de l'image, porteuse des conditions d'éclairage du milieu sous-marin, est convertie en volume. La lumière captée dans l'eau détermine le relief. La présence vivante devient forme." data-en="These forms were captured at hundreds of meters depth, in lighting conditions the human eye never directly encounters. What you observe here is neither a faithful reconstruction nor a fictional creation: it is the result of a translation protocol where the luminance of the image, carrying the lighting conditions of the underwater environment, is converted into volume. The light captured in the water determines the relief. The living presence becomes form.">Ces formes ont été captées à des centaines de mètres de profondeur, dans des conditions lumineuses que l'œil humain ne rencontre jamais directement.<br><br>Ce que vous observez ici n'est ni une reconstitution fidèle, ni une création fictionnelle : c'est le résultat d'un protocole de traduction où la luminance de l'image, porteuse des conditions d'éclairage du milieu sous-marin, est convertie en volume. La lumière captée dans l'eau détermine le relief. La présence vivante devient forme.</p>
+            <p class="pause-text" data-fr="Ces formes ont été captées à des centaines de mètres de profondeur, dans des conditions lumineuses que l'œil humain ne rencontre jamais directement." data-en="These forms were recorded hundreds of metres deep, in lighting conditions the human eye never meets directly.">Ces formes ont été captées à des centaines de mètres de profondeur, dans des conditions lumineuses que l'œil humain ne rencontre jamais directement.</p>
 
-            <p class="pause-text" data-fr="Cet espace a été conçu comme une épreuve perceptive : tester comment ces volumes traduits se comportent à distance, dans un contexte d'exposition, en jouant sur l'échelle et la durée du regard." data-en="This space was designed as a perceptual test: testing how these translated volumes behave at a distance, in an exhibition context, playing on scale and the duration of the gaze.">Cet espace a été conçu comme une épreuve perceptive : tester comment ces volumes traduits se comportent à distance, dans un contexte d'exposition, en jouant sur l'échelle et la durée du regard.</p>
+            <p class="pause-text" data-fr="Ce que vous observez n'est ni une reconstitution fidèle, ni une création fictionnelle : c'est le résultat d'un protocole de traduction. La luminance de l'image, porteuse des conditions d'éclairage du milieu sous-marin, est convertie en volume. La lumière captée dans l'eau détermine le relief ; la présence vivante devient forme." data-en="What you see is neither a faithful reconstruction nor a fictional creation: it is the result of a translation protocol. The luminance of the image, which carries the lighting conditions of the underwater environment, is converted into volume. The light captured in the water sets the relief; the living presence becomes form.">Ce que vous observez n'est ni une reconstitution fidèle, ni une création fictionnelle : c'est le résultat d'un protocole de traduction. La luminance de l'image, porteuse des conditions d'éclairage du milieu sous-marin, est convertie en volume. La lumière captée dans l'eau détermine le relief ; la présence vivante devient forme.</p>
 
-            <div class="pause-meta" data-fr="Les contenus peuvent évoluer au cours du projet. Déplacement lent recommandé. Navigation libre." data-en="Content may evolve during the project. Slow movement recommended. Free navigation.">Les contenus peuvent évoluer au cours du projet.<br>Déplacement lent recommandé.<br>Navigation libre.</div>
+            <p class="pause-text" data-fr="Cet espace a été conçu comme une épreuve perceptive : observer comment ces volumes traduits se comportent à distance, dans un contexte d'exposition, en jouant sur l'échelle et la durée du regard." data-en="This space was designed as a perceptual test: observing how these translated volumes behave at a distance, in an exhibition setting, by playing with scale and the duration of the gaze.">Cet espace a été conçu comme une épreuve perceptive : observer comment ces volumes traduits se comportent à distance, dans un contexte d'exposition, en jouant sur l'échelle et la durée du regard.</p>
+
+            <div class="pause-meta">
+                <span data-fr="Les contenus peuvent évoluer au cours du projet." data-en="Content may change as the project evolves.">Les contenus peuvent évoluer au cours du projet.</span>
+                <span data-fr="Déplacement lent recommandé." data-en="Slow movement recommended.">Déplacement lent recommandé.</span>
+                <span data-fr="Navigation libre." data-en="Free navigation.">Navigation libre.</span>
+            </div>
         </div>
 
         <div class="pause-controls" onclick="event.stopPropagation()">
@@ -2545,7 +2702,7 @@
                 <button class="mute-button" id="mute-button" onclick="toggleMute()" ontouchstart="showVolumeSlider()" onmouseenter="showVolumeSlider()">
                     <svg id="mute-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path id="sound-waves" d="M12 6v12M8 9v6M16 8v8M4 11v2M20 10v4"></path>
-                        <line id="mute-slash" x1="4" y1="4" x2="20" y2="20" stroke-width="2" style="opacity:0;"></line>
+                        <path id="mute-slash" d="M4 12h16" style="opacity:0;"></path>
                     </svg>
                 </button>
             </div>
@@ -2570,7 +2727,10 @@
             </button>
         </div>
 
-        <div class="pause-credits">Musique : Teimo (schluss) par Thomas Köner<br>Images issues principalement des archives du Schmidt Ocean Institute.</div>
+        <div class="pause-credits">
+            <span data-fr="Musique : Teimo (Schluss), Thomas Köner" data-en="Music: Teimo (Schluss), Thomas Köner">Musique : Teimo (Schluss), Thomas Köner</span>
+            <span data-fr="Images issues principalement des archives du Schmidt Ocean Institute." data-en="Footage mainly from the Schmidt Ocean Institute archives.">Images issues principalement des archives du Schmidt Ocean Institute.</span>
+        </div>
     </div>
 
     <!-- Fade-from-black overlay (reveals 3D scene smoothly after loading) -->
@@ -2578,9 +2738,6 @@
 
     <!-- Loading Screen (mobile only — desktop uses reparented poulpe logo) -->
     <div id="loading-screen">
-        <video class="loading-video loading-video-mobile" autoplay loop muted playsinline preload="auto">
-            <source src="videos/dumbo_icone_chargement.webm" type="video/webm">
-        </video>
     </div>
 
     <a href="index.html" id="title-link">
@@ -2994,6 +3151,17 @@
             var vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--real-vh', vh + 'px');
         });
+
+        // Mac : la touche ALT s'appelle Option (⌥) — on adapte les badges d'instructions
+        (function() {
+            var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+            if (/mac/i.test(plat)) {
+                document.body.classList.add('mac-keys');
+                document.querySelectorAll('.instruction-line .key').forEach(function(k) {
+                    if (k.textContent.trim() === 'ALT') { k.textContent = '⌥ Option'; k.classList.add('key-wide'); }
+                });
+            }
+        })();
 
         // PERFORMANCE: Désactiver tous les console.log en production
         const DEBUG_MODE = false;
@@ -3414,6 +3582,7 @@
 
         // Fonction pour vérifier et cacher les instructions (niveau global pour scroll + clavier)
         function checkHideInstructions() {
+            return; // Les instructions restent affichées en permanence
             if (instructionsHidden) return;
 
             // Conditions: au moins 2 touches distinctes OU au moins 3 scrolls
@@ -9148,7 +9317,8 @@
 
                     const isOnFloor11 = Math.abs(camera.position.y - expectedCameraY) < tolerance;
 
-                    if (isOnFloor11 && !instructionsHidden) {
+                    // Toujours affichées en mode visite (plus de condition sol / interactions)
+                    if (true) {
                         // Show instructions until user interacts enough
                         instructionsElement.classList.remove('hidden');
                         gameInstructionsVisible = true;
@@ -9773,12 +9943,7 @@
             document.body.classList.remove('hoverPlay');
             document.body.classList.add('clickedPlay');
 
-            // Lancer le poulpe vidéo immédiatement (tous devices)
-            const poulpeVideo = document.getElementById('welcome-logo-poulpe');
-            if (poulpeVideo) {
-                poulpeVideo.play().catch(() => {});
-                console.log('🐙 Poulpe vidéo: lecture lancée');
-            }
+            // Le logo passe en mode "nage" via CSS (body.clickedPlay) — rien à lancer en JS
 
             // Phase 2: Après le fondu du texte — délais réduits sur mobile pour fluidité
             const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 2);
@@ -9855,9 +10020,12 @@
                 logoContainer.style.top = rect.top + 'px';
                 logoContainer.style.width = rect.width + 'px';
                 logoContainer.style.height = rect.height + 'px';
-                // Forcer un reflow puis réactiver les transitions
+                // Forcer un reflow puis terminer le glissement jusqu'au centre exact
+                // (le rect capturé peut être en cours de transition, donc pas encore centré)
                 logoContainer.offsetHeight;
-                logoContainer.style.transition = '';
+                logoContainer.style.transition = 'left 0.45s cubic-bezier(0.22, 1, 0.36, 1), top 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease';
+                logoContainer.style.left = (window.innerWidth - rect.width) / 2 + 'px';
+                logoContainer.style.top = (window.innerHeight - rect.height) / 2 + 'px';
                 console.log('🐙 Logo poulpe détaché et reparenté dans body');
             }
 
@@ -9946,6 +10114,7 @@
                     updateEscInstructionVisibility();
                 });
 
+                updateEscInstructionVisibility(); // état initial (plein écran accepté ou non)
                 autoLoadSequence();
             }, 100);
         }
@@ -10070,62 +10239,6 @@
                 }, 300);
             }
 
-            // Desktop: pause poulpe video at frame 1 (static logo) + render to hi-res canvas
-            const poulpeVideo = document.getElementById('welcome-logo-poulpe');
-            if (poulpeVideo) {
-                function initPoulpePause() {
-                    poulpeVideo.currentTime = 0;
-                    poulpeVideo.pause();
-                    console.log('🐙 Poulpe vidéo desktop: pausé à la frame 1');
-                }
-                function setupPoulpeCanvas() {
-                    // Render poulpe at native video resolution → canvas, then CSS downscales crisply
-                    const w = poulpeVideo.videoWidth || 512;
-                    const h = poulpeVideo.videoHeight || 512;
-                    const logoCanvas = document.createElement('canvas');
-                    logoCanvas.width = w;
-                    logoCanvas.height = h;
-                    logoCanvas.className = 'welcome-logo-poulpe-canvas';
-                    logoCanvas.id = 'welcome-logo-poulpe-canvas';
-                    poulpeVideo.parentNode.insertBefore(logoCanvas, poulpeVideo.nextSibling);
-                    poulpeVideo.style.visibility = 'hidden';
-                    poulpeVideo.style.width = '0';
-                    poulpeVideo.style.height = '0';
-                    const ctx = logoCanvas.getContext('2d');
-                    let poulpeRafId = 0;
-                    function renderPoulpeFrame() {
-                        if (poulpeVideo.readyState >= 2) {
-                            ctx.drawImage(poulpeVideo, 0, 0, w, h);
-                        }
-                        poulpeRafId = requestAnimationFrame(renderPoulpeFrame);
-                    }
-                    renderPoulpeFrame();
-                    // Stop rendering when welcome screen is gone
-                    const obs = new MutationObserver(function() {
-                        const ws = document.getElementById('welcome-screen');
-                        if (!ws || ws.style.display === 'none') {
-                            // Keep rendering during loading (logo is reparented)
-                            setTimeout(function() {
-                                if (!document.getElementById('welcome-logo-poulpe-canvas')) {
-                                    cancelAnimationFrame(poulpeRafId);
-                                    obs.disconnect();
-                                }
-                            }, 10000);
-                        }
-                    });
-                    obs.observe(document.body, { childList: true, subtree: true });
-                    console.log('🎨 Poulpe canvas: rendu natif ' + w + 'x' + h + 'px');
-                }
-                poulpeVideo.addEventListener('loadeddata', function() {
-                    initPoulpePause();
-                    setupPoulpeCanvas();
-                });
-                if (poulpeVideo.readyState >= 2) {
-                    initPoulpePause();
-                    setupPoulpeCanvas();
-                }
-            }
-
             // Handle background video loading
             // Source is set directly in HTML with preload="auto" and <link rel="preload">
             // so the browser starts fetching the video as early as possible.
@@ -10224,11 +10337,6 @@
             const loadingVideo = document.querySelector('#loading-screen .loading-video');
             if (loadingVideo && loadingVideo.paused) {
                 loadingVideo.play().catch(() => {});
-            }
-            // Desktop: poulpe video (reparented as loading indicator)
-            const poulpeVideo = document.getElementById('welcome-logo-poulpe');
-            if (poulpeVideo && poulpeVideo.paused && document.body.classList.contains('clickedPlay')) {
-                poulpeVideo.play().catch(() => {});
             }
         }
 
@@ -11496,6 +11604,7 @@
             if (escInstr) { escInstr.style.opacity = isFS ? '1' : '0'; escInstr.style.visibility = isFS ? 'visible' : 'hidden'; }
             const pauseEscInstr = document.getElementById('pause-esc-fullscreen-instruction');
             if (pauseEscInstr) { pauseEscInstr.style.opacity = isFS ? '1' : '0'; pauseEscInstr.style.visibility = isFS ? 'visible' : 'hidden'; }
+            document.querySelectorAll('.esc-fs-instr').forEach(function(el) { el.style.display = isFS ? '' : 'none'; });
         }
 
         // ═══════════════════════════════════════════════════════════════
