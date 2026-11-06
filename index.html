@@ -964,56 +964,20 @@
             transition: opacity 0.5s ease;
         }
 
-        /* ═══ Logo Dumbo — SVG vectoriel en calques, animé UNIQUEMENT en transform ═══
-           Chaque calque (nageoire haute, nageoire basse, corps) est une div qui contient son SVG.
-           Les animations CSS de transform sur des éléments HTML tournent sur le compositeur GPU :
-           elles restent fluides même quand le JS est saturé (génération des particules au chargement).
-           Remplace l'ancienne vidéo MP4 redessinée dans un canvas à chaque frame. */
-        .welcome-logo-container { overflow: visible; }
-        .dumbo-logo,
-        .dumbo-logo .dl-layer {
+        .welcome-logo-poulpe {
             position: absolute;
-            inset: 0;
-        }
-        .dumbo-logo .dl-layer {
-            will-change: transform;
-            animation-duration: var(--dl-period, 3.6s);
-            animation-timing-function: ease-in-out;
-            animation-iteration-count: infinite;
-        }
-        .dumbo-logo svg {
-            display: block;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
+            object-fit: contain;
+            /* Même rendu que l'ancien canvas */
+            filter: contrast(1.12) brightness(1.08);
+        }
+        /* Screen blend: le noir de la vidéo mp4 disparaît contre l'arrière-plan */
+        .welcome-logo-container {
+            mix-blend-mode: screen;
             overflow: visible;
-            fill: #fff;
-        }
-        .dumbo-logo .dl-drift   { animation-name: dlDrift; }
-        .dumbo-logo .dl-fin-top { animation-name: dlFinTop; transform-origin: 41% 27%; }
-        .dumbo-logo .dl-fin-low { animation-name: dlFinLow; transform-origin: 20% 61%; }
-        .dumbo-logo .dl-body    { animation-name: dlBody;   transform-origin: 52% 58%; }
-        /* Au clic sur Play : le poulpe nage (cycle plus rapide) pendant le chargement */
-        body.clickedPlay .dumbo-logo,
-        .welcome-logo-container.detached .dumbo-logo { --dl-period: 1.15s; }
-
-        @keyframes dlDrift {
-            0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-            50%      { transform: translate3d(-3%, -4%, 0) rotate(-2deg); }
-        }
-        @keyframes dlFinTop {
-            0%, 100% { transform: rotate(0deg); }
-            50%      { transform: rotate(-16deg); }
-        }
-        @keyframes dlFinLow {
-            0%, 100% { transform: rotate(0deg); }
-            50%      { transform: rotate(13deg); }
-        }
-        @keyframes dlBody {
-            0%, 100% { transform: scale(1, 1); }
-            50%      { transform: scale(1.025, 0.975); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .dumbo-logo .dl-layer { animation: none; }
         }
 
         /* Pause Screen - Ultra Modern */
@@ -2324,58 +2288,37 @@
            (bloc final : surcharge volontairement les règles plus haut)
            ═══════════════════════════════════════════════════════════════ */
 
-        /* ── Boutons : repos sombre · survol = grossit + blanc · clic/appui = bleu ──
-           Le bleu n'apparaît jamais au repos ; l'état (son coupé, plein écran…)
-           se lit dans l'icône, pas dans la couleur. */
-        :root {
-            --btn-ink: #0b0d1a;
-            --btn-blue: rgba(100,150,255,0.85);
-            --btn-blue-border: rgba(150,185,255,1);
-        }
-        .mute-button, .pause-close-btn, .lang-button,
-        #mobile-pause-btn, #mobile-fullscreen-btn, #gyro-toggle-btn, #manual-toggle-btn,
-        #mobile-pause-btn.active-infos, #mobile-fullscreen-btn.active-state,
+        /* ── Boutons : style d'origine. Survol = léger grossissement + bleu ; clic/appui = bleu.
+           Jamais de bleu au repos : l'état (son coupé, plein écran, panneau infos)
+           se lit dans l'icône, pas dans la couleur. ── */
         .mute-button.active-state, .pause-close-btn.active-state, .lang-button.active-state {
-            background: rgba(0,0,0,0.55) !important;
-            border: 1px solid rgba(255,255,255,0.18) !important;
-            color: #fff !important;
-            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-                        background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
+            background: rgba(0,0,0,0.7);
+            border-color: var(--color-border);
         }
-        /* Mode choisi (gyroscope / manuel) : contour blanc, pas de bleu */
-        #gyro-toggle-btn.mode-active, #manual-toggle-btn.mode-active {
-            background: rgba(0,0,0,0.55) !important;
-            border: 1.5px solid rgba(255,255,255,0.9) !important;
+        .mute-button:hover, .pause-close-btn:hover, .lang-button:hover,
+        .mute-button.active-state:hover, .pause-close-btn.active-state:hover, .lang-button.active-state:hover {
+            background: rgba(100,150,255,0.35);
+            border-color: rgba(100,150,255,0.8);
+            transform: scale(1.05);
         }
-        @media (hover: hover) and (pointer: fine) {
-            .mute-button:hover, .pause-close-btn:hover, .lang-button:hover,
-            #mobile-pause-btn:hover, #mobile-fullscreen-btn:hover, #gyro-toggle-btn:hover, #manual-toggle-btn:hover {
-                transform: scale(1.15);
-                background: #fff !important;
-                border-color: #fff !important;
-                color: var(--btn-ink) !important;
+        .mute-button:active, .pause-close-btn:active, .lang-button:active {
+            background: rgba(100,150,255,0.45);
+            border-color: rgba(100,150,255,0.9);
+            transform: scale(0.93);
+        }
+        @media (max-width: 768px), (pointer: coarse) {
+            #mobile-pause-btn.active-infos,
+            #mobile-fullscreen-btn.active-state,
+            #gyro-toggle-btn.mode-active,
+            #manual-toggle-btn.mode-active {
+                background: rgba(0,0,0,0.7);
+                border-color: var(--color-border);
+            }
+            #gyro-toggle-btn:active, #manual-toggle-btn:active {
+                background: rgba(100,150,255,0.25) !important;
+                border-color: rgba(100,150,255,0.6) !important;
             }
         }
-        .mute-button:active, .pause-close-btn:active, .lang-button:active,
-        #mobile-pause-btn:active, #mobile-fullscreen-btn:active, #gyro-toggle-btn:active, #manual-toggle-btn:active {
-            transform: scale(0.94) !important;
-            background: var(--btn-blue) !important;
-            border-color: var(--btn-blue-border) !important;
-            color: #fff !important;
-            transition-duration: 0.08s !important;
-        }
-
-        /* Bouton Play : même règle (blob blanc translucide au repos, blanc au survol, bleu au clic) */
-        .play-button-container .play-rond {
-            filter: brightness(0) invert(1);
-            opacity: 0.16;
-            transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.25s ease, filter 0.15s ease;
-        }
-        .play-button-container .play-fleche { transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1), filter 0.2s ease; }
-        body.hoverPlay .play-button-container .play-rond { opacity: 1; }
-        body.hoverPlay .play-button-container .play-fleche { filter: brightness(0); }
-        .play-button-container:active .play-rond { filter: none; opacity: 1; }
-        .play-button-container:active .play-fleche { filter: none; }
 
         /* ── Icône son : coupé = les barres s'aplatissent en une barre plate ── */
         #sound-waves {
@@ -2399,8 +2342,7 @@
             margin-top: 6px;
         }
         .welcome-note-name { font-weight: 500; color: rgba(255,255,255,0.9); }
-        .pause-meta span, .pause-credits span { display: block; }
-        .pause-credits { font-style: normal; line-height: 1.6; color: rgba(255,255,255,0.4); }
+        .pause-credits span { display: block; }
 
         /* ── Ordinateur : toute l'interface ×1.25 + texte plus lisible ──
            Les tailles de texte sont plafonnées par la hauteur d'écran (vh)
@@ -2444,13 +2386,9 @@
                 text-wrap: pretty;
             }
             .pause-meta { font-size: 12.5px; }
-            .pause-credits { font-size: 13.5px; }
 
-            /* Instructions et boutons fixes : agrandis proportionnellement */
-            .persistent-instructions, .game-instructions, .pause-instructions,
-            .pause-controls, .pause-close-btn, .pause-credits {
-                zoom: 1.25;
-            }
+            /* Boutons de contrôle (son, langue, plein écran) agrandis ensemble */
+            .pause-controls { zoom: 1.25; }
         }
     </style>
 </head>
@@ -2583,11 +2521,6 @@
             <img class="instruction-svg" src="img/icone-fleches.svg" width="40" height="40" alt="Flèches">
             <span data-fr="Se déplacer" data-en="Move">Se déplacer</span>
         </div>
-        <div class="instruction-line secondary">
-            <!-- Mouse wheel scroll icon -->
-            <img class="instruction-svg" src="img/icone-scroll.svg" width="40" height="40" alt="Scroll">
-            <span data-fr="Avancer / Reculer" data-en="Forward / Backward">Avancer / Reculer</span>
-        </div>
         <div class="instruction-line secondary esc-fs-instr">
             <span class="key">ESC</span>
             <span data-fr="Quitter le plein écran" data-en="Exit fullscreen">Quitter le plein écran</span>
@@ -2608,14 +2541,12 @@
         <div id="welcome-fade-overlay"></div>
 
         <div class="welcome-logo-container" id="welcome-logo-container">
-            <!-- Logo Dumbo vectoriel en calques (nageoires derrière, corps devant), animé en CSS -->
-            <div class="dumbo-logo" role="img" aria-label="Dumbo">
-                <div class="dl-layer dl-drift">
-                    <div class="dl-layer dl-fin-top"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M228 160 C250 120 262 70 246 36 C222 22 192 50 176 110 C172 134 196 156 228 160 Z"/></svg></div>
-                    <div class="dl-layer dl-fin-low"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M72 296 C46 322 18 346 8 366 C40 378 92 370 124 350 C120 320 100 296 72 296 Z"/></svg></div>
-                    <div class="dl-layer dl-body"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M176 110 C120 112 62 150 48 210 C42 250 56 282 72 296 C92 318 108 336 124 350 C170 400 250 450 340 466 C360 470 384 466 400 456 Q420 470 436 444 Q466 446 462 410 Q494 400 480 366 Q512 348 496 312 C478 262 440 220 400 210 C340 196 270 196 232 152 C216 128 198 112 176 110 Z"/></svg></div>
-                </div>
-            </div>
+            <!-- Poulpe vidéo : frame 1 = logo, puis joue en icône de chargement.
+                 Affichée directement (décodage + composition GPU) : elle reste fluide
+                 même quand le JS génère la scène. Plus de recopie dans un canvas. -->
+            <video class="welcome-logo-poulpe" id="welcome-logo-poulpe" loop muted playsinline preload="auto">
+                <source src="videos/poulpe_icone_chargement_desktop.mp4" type="video/mp4">
+            </video>
         </div>
 
         <div class="welcome-content" id="welcome-content">
@@ -2663,11 +2594,6 @@
                 <span data-fr="Se déplacer" data-en="Move">Se déplacer</span>
             </div>
             <div class="instruction-line secondary">
-                <!-- Mouse wheel scroll icon -->
-                <img class="instruction-svg" src="img/icone-scroll.svg" width="40" height="40" alt="Scroll">
-                <span data-fr="Avancer / Reculer" data-en="Forward / Backward">Avancer / Reculer</span>
-            </div>
-            <div class="instruction-line secondary">
                 <span class="key">ESC</span>
                 <span data-fr="Quitter le plein écran" data-en="Exit fullscreen">Quitter le plein écran</span>
             </div>
@@ -2678,19 +2604,13 @@
         </div>
 
         <div class="pause-content" onclick="event.stopPropagation()">
-            <h2 class="pause-title" data-fr="À propos de ce projet" data-en="About this project">À propos de ce projet</h2>
+            <h2 class="pause-title" data-fr="À propos" data-en="About">À propos</h2>
 
             <p class="pause-text" data-fr="Ces formes ont été captées à des centaines de mètres de profondeur, dans des conditions lumineuses que l'œil humain ne rencontre jamais directement." data-en="These forms were recorded hundreds of metres deep, in lighting conditions the human eye never meets directly.">Ces formes ont été captées à des centaines de mètres de profondeur, dans des conditions lumineuses que l'œil humain ne rencontre jamais directement.</p>
 
             <p class="pause-text" data-fr="Ce que vous observez n'est ni une reconstitution fidèle, ni une création fictionnelle : c'est le résultat d'un protocole de traduction. La luminance de l'image, porteuse des conditions d'éclairage du milieu sous-marin, est convertie en volume. La lumière captée dans l'eau détermine le relief ; la présence vivante devient forme." data-en="What you see is neither a faithful reconstruction nor a fictional creation: it is the result of a translation protocol. The luminance of the image, which carries the lighting conditions of the underwater environment, is converted into volume. The light captured in the water sets the relief; the living presence becomes form.">Ce que vous observez n'est ni une reconstitution fidèle, ni une création fictionnelle : c'est le résultat d'un protocole de traduction. La luminance de l'image, porteuse des conditions d'éclairage du milieu sous-marin, est convertie en volume. La lumière captée dans l'eau détermine le relief ; la présence vivante devient forme.</p>
 
             <p class="pause-text" data-fr="Cet espace a été conçu comme une épreuve perceptive : observer comment ces volumes traduits se comportent à distance, dans un contexte d'exposition, en jouant sur l'échelle et la durée du regard." data-en="This space was designed as a perceptual test: observing how these translated volumes behave at a distance, in an exhibition setting, by playing with scale and the duration of the gaze.">Cet espace a été conçu comme une épreuve perceptive : observer comment ces volumes traduits se comportent à distance, dans un contexte d'exposition, en jouant sur l'échelle et la durée du regard.</p>
-
-            <div class="pause-meta">
-                <span data-fr="Les contenus peuvent évoluer au cours du projet." data-en="Content may change as the project evolves.">Les contenus peuvent évoluer au cours du projet.</span>
-                <span data-fr="Déplacement lent recommandé." data-en="Slow movement recommended.">Déplacement lent recommandé.</span>
-                <span data-fr="Navigation libre." data-en="Free navigation.">Navigation libre.</span>
-            </div>
         </div>
 
         <div class="pause-controls" onclick="event.stopPropagation()">
@@ -3152,13 +3072,13 @@
             document.documentElement.style.setProperty('--real-vh', vh + 'px');
         });
 
-        // Mac : la touche ALT s'appelle Option (⌥) — on adapte les badges d'instructions
+        // Mac : la touche ALT s'appelle Option — on adapte les badges d'instructions
         (function() {
             var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
             if (/mac/i.test(plat)) {
                 document.body.classList.add('mac-keys');
                 document.querySelectorAll('.instruction-line .key').forEach(function(k) {
-                    if (k.textContent.trim() === 'ALT') { k.textContent = '⌥ Option'; k.classList.add('key-wide'); }
+                    if (k.textContent.trim() === 'ALT') { k.textContent = 'Option'; k.classList.add('key-wide'); }
                 });
             }
         })();
@@ -9943,7 +9863,9 @@
             document.body.classList.remove('hoverPlay');
             document.body.classList.add('clickedPlay');
 
-            // Le logo passe en mode "nage" via CSS (body.clickedPlay) — rien à lancer en JS
+            // Lancer le poulpe vidéo immédiatement (tous devices)
+            const poulpeVideo = document.getElementById('welcome-logo-poulpe');
+            if (poulpeVideo) poulpeVideo.play().catch(() => {});
 
             // Phase 2: Après le fondu du texte — délais réduits sur mobile pour fluidité
             const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 2);
@@ -10183,7 +10105,8 @@
             const persistInstr = document.getElementById('persistent-instructions');
             const gameInstr = document.getElementById('game-instructions');
             if (persistInstr) { persistInstr.style.opacity = ''; persistInstr.style.visibility = ''; }
-            if (gameInstr && !gameInstr.classList.contains('hidden')) { gameInstr.style.opacity = ''; gameInstr.style.visibility = ''; }
+            // Toujours restaurer : la boucle de rendu gère ensuite l'affichage via la classe .hidden
+            if (gameInstr) { gameInstr.style.opacity = ''; gameInstr.style.visibility = ''; }
 
             // Hide cursor when resuming FPS experience
             if (fpsMode && !isMobile) {
@@ -10237,6 +10160,19 @@
                 setTimeout(() => {
                     initialLoader.remove();
                 }, 300);
+            }
+
+            // Poulpe vidéo : pausée à la frame 1 (= logo statique) jusqu'au clic sur Play.
+            // Affichée telle quelle (plus de recopie canvas à chaque frame = plus de saccades).
+            const poulpeVideo = document.getElementById('welcome-logo-poulpe');
+            if (poulpeVideo) {
+                const holdFirstFrame = function() {
+                    if (document.body.classList.contains('clickedPlay')) return;
+                    poulpeVideo.pause();
+                    poulpeVideo.currentTime = 0;
+                };
+                if (poulpeVideo.readyState >= 2) holdFirstFrame();
+                else poulpeVideo.addEventListener('loadeddata', holdFirstFrame, { once: true });
             }
 
             // Handle background video loading
@@ -10337,6 +10273,11 @@
             const loadingVideo = document.querySelector('#loading-screen .loading-video');
             if (loadingVideo && loadingVideo.paused) {
                 loadingVideo.play().catch(() => {});
+            }
+            // Desktop: poulpe video (reparented as loading indicator)
+            const poulpeVideo = document.getElementById('welcome-logo-poulpe');
+            if (poulpeVideo && poulpeVideo.paused && document.body.classList.contains('clickedPlay')) {
+                poulpeVideo.play().catch(() => {});
             }
         }
 
