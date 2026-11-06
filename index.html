@@ -3073,6 +3073,7 @@
         let raycastCounter = 0;
         const RAYCAST_INTERVAL = 3; // Raycast every 3 frames
         let lastGroundY = null; // Cache last ground hit
+        const FLOOR_BASE_Y = -111.773; // Hauteur du sol principal (forme 11) — filet de sécurité anti-chute
 
         // Flow movement data - stores random offsets for each particle
         let flowOffsets = null;
@@ -9051,9 +9052,19 @@
                             playerVelocityY = 0;
                             isOnGround = true;
                         } else {
-                            isOnGround = false;
+                            // Sol pas encore généré (vidéos en chargement) ou hors zone :
+                            // on applique la gravité mais sans jamais passer sous le sol principal,
+                            // sinon le raycast vers le bas ne retrouve plus jamais le sol (chute infinie).
+                            const safetyY = FLOOR_BASE_Y + fpsSettings.fpsPlayerHeight;
                             playerVelocityY += fpsSettings.fpsGravity;
                             camera.position.y += playerVelocityY;
+                            if (camera.position.y <= safetyY) {
+                                camera.position.y = safetyY;
+                                playerVelocityY = 0;
+                                isOnGround = true;
+                            } else {
+                                isOnGround = false;
+                            }
                         }
                     }
 
@@ -9132,8 +9143,7 @@
             if (instructionsElement) {
                 // Show instructions ONLY in FPS mode when on floor 11
                 if (fpsMode && !isPaused) {
-                    const FLOOR_11_Y = -111.773;
-                    const expectedCameraY = FLOOR_11_Y + fpsSettings.fpsPlayerHeight;
+                    const expectedCameraY = FLOOR_BASE_Y + fpsSettings.fpsPlayerHeight;
                     const tolerance = 8;
 
                     const isOnFloor11 = Math.abs(camera.position.y - expectedCameraY) < tolerance;
