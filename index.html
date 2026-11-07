@@ -6648,7 +6648,7 @@
                 gpuVideoTexture = new THREE.VideoTexture(video);
                 gpuVideoTexture.minFilter = THREE.LinearFilter;
                 gpuVideoTexture.magFilter = THREE.LinearFilter;
-                gpuVideoTexture.format = THREE.RGBFormat;
+                gpuVideoTexture.format = THREE.RGBAFormat; // RGBA = envoi vidéo rapide (pas de conversion CPU)
                 gpuVideoTexture.flipY = false; // UVs are computed top-down (y/H), matching video pixel order
                 lastVideoTime = -1; // Reset frame tracking for new video
             }
@@ -6870,7 +6870,7 @@
                     gpuFloorVideoTexture = new THREE.VideoTexture(floorVideo);
                     gpuFloorVideoTexture.minFilter = THREE.LinearFilter;
                     gpuFloorVideoTexture.magFilter = THREE.LinearFilter;
-                    gpuFloorVideoTexture.format = THREE.RGBFormat;
+                    gpuFloorVideoTexture.format = THREE.RGBAFormat;
                     gpuFloorVideoTexture.flipY = false;
                     lastFloorVideoTime = -1;
                 }
@@ -8712,6 +8712,13 @@
 
         // Animation with subtle breathing movement and video texture updates
         let animateFrameCount = 0;
+        function videoTextureWatchdog(tex, video) {
+            if (!tex || !video || video.paused || video.readyState < 2) return;
+            const now = performance.now();
+            if (tex._wdVersion !== tex.version) { tex._wdVersion = tex.version; tex._wdTime = now; return; }
+            if (now - (tex._wdTime || now) > 500) { tex.needsUpdate = true; tex._wdTime = now; }
+        }
+
         function animate() {
             if (webglContextLost) return;
             requestAnimationFrame(animate);
@@ -8780,30 +8787,15 @@
                 }
             }
 
-            // GPU PIPELINE: Only update texture when video frame actually changes
-            // Avoids re-uploading 28MB (8640×1080×RGB) to GPU on every frame
-            if (gpuVideoTexture && panoramicVideo) {
-                const currentVideoTime = panoramicVideo.currentTime;
-                if (currentVideoTime !== lastVideoTime) {
-                    gpuVideoTexture.needsUpdate = true;
-                    lastVideoTime = currentVideoTime;
-                }
-            } else if (gpuVideoTexture && currentVideo) {
-                const currentVideoTime = currentVideo.currentTime;
-                if (currentVideoTime !== lastVideoTime) {
-                    gpuVideoTexture.needsUpdate = true;
-                    lastVideoTime = currentVideoTime;
-                }
-            }
-
-            // GPU PIPELINE: Update floor video texture separately (ecran_06.webm)
-            if (gpuFloorVideoTexture && floorVideo && !floorVideo.paused) {
-                const currentFloorTime = floorVideo.currentTime;
-                if (currentFloorTime !== lastFloorVideoTime) {
-                    gpuFloorVideoTexture.needsUpdate = true;
-                    lastFloorVideoTime = currentFloorTime;
-                }
-            }
+            // Textures vidéo : rien à faire ici. THREE.VideoTexture (r128) s'auto-actualise via
+            // requestVideoFrameCallback, exactement une fois par NOUVELLE image décodée.
+            // L'ancien test sur currentTime (qui avance à chaque frame de rendu) ré-envoyait
+            // la texture panoramique ~60×/s au lieu de 25–30×/s : envois en double, mal calés
+            // sur les vraies images → micro-saccades sur les écrans.
+            // Filet de sécurité : si une vidéo joue mais que sa texture n'a pas bougé depuis 0,5 s
+            // (navigateur sans requestVideoFrameCallback fiable), on force une mise à jour.
+            videoTextureWatchdog(gpuVideoTexture, panoramicVideo || currentVideo);
+            videoTextureWatchdog(gpuFloorVideoTexture, floorVideo);
 
             // PERFORMANCE: Skip particle animation loop entirely if no breathing and no flow
             const needsParticleAnimation = breathSpeed > 0 || flowIntensity > 0;
@@ -10399,15 +10391,10 @@
                     const prevEl = document.getElementById('preview');
                     if (prevEl) {
                         prevEl.textContent = '';
-                        const pvid = document.createElement('video');
-                        pvid.src = previewSrc;
-                        pvid.muted = true;
-                        pvid.loop = true;
-                        pvid.playsInline = true;
-                        pvid.style.cssText = 'max-width:100%;max-height:100%';
-                        prevEl.appendChild(pvid);
+                        // Pas de 2e lecteur vidéo ici : décoder une copie du panorama (4320 px)
+                        // dans ce panneau admin caché concurrençait la vidéo des écrans.
+                        prevEl.textContent = previewSrc.split('/').pop();
                         prevEl.classList.add('loaded');
-                        pvid.play().catch(function() {});
                     }
 
                     // Auto-apply
