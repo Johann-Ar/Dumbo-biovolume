@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ROOM, MEDIA } from './config.js';
 import { makeVideo, SliceColors } from './media.js';
+import { reliefScreen } from './relief.js';
 
 // Écrans plats : murs longs, fond et sol, du sol jusqu'en haut.
 // Les trois murs forment une seule bande continue (gauche -> fond -> droite) sur laquelle
@@ -14,7 +15,7 @@ function stripMaterial(tex, s0, len, total, H, band0, bandH) {
     fragmentShader: /* glsl */`
       uniform sampler2D map; uniform float uS0, uLen, uTotal, uH, uB0, uBH; varying vec2 vUv;
       void main(){
-        float u = (uS0 + vUv.x * uLen) / uTotal;
+        float u = (uS0 + vUv.x * uLen) / uTotal; // uS0 inclut la coupe de début, uTotal = longueur du panorama
         float v = (vUv.y * uH - uB0) / uBH;
         vec3 c = (v < 0.0 || v > 1.0) ? vec3(0.0) : texture2D(map, vec2(u, v)).rgb;
         c = max(c - 0.02, 0.0) / 0.98; // noir pur : retire le voile gris de compression autour des créatures
@@ -38,19 +39,34 @@ export class Screens {
     const { length: L, width: W, height: H, bays, backH } = ROOM;
     this.pano = makeVideo(MEDIA.panorama);
     this.floorVid = makeVideo(MEDIA.floor);
-    const total = 2 * L + W;                    // 50 m de bande
-    const bandH = total / 8;                    // panorama 8:1 sans déformation
-    const band0 = (H - bandH) / 2;
+    const total = 2 * L + W;                    // 50 m de murs
+    // Le panorama (8:1) remplit toute la hauteur (9 m) sans déformation : il ferait 72 m de long,
+    // on en garde les 50 m du centre (les bords gauche et droit de la bande sont coupés).
+    const bandH = H, band0 = 0;
+    const panoLen = 8 * H, cut = (panoLen - total) / 2;
 
     const add = (w, h, m, pos, ry, rx = 0) => { const o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); o.position.copy(pos); o.rotation.set(rx, ry, 0, 'YXZ'); scene.add(o); return o; };
-    add(L, H, stripMaterial(this.pano.tex, 0, L, total, H, band0, bandH), new THREE.Vector3(-W / 2, H / 2, 0), Math.PI / 2);
-    add(W, backH, stripMaterial(this.pano.tex, L, W, total, backH, band0, bandH), new THREE.Vector3(0, backH / 2, -L / 2), 0);
-    add(L, H, stripMaterial(this.pano.tex, L + W, L, total, H, band0, bandH), new THREE.Vector3(W / 2, H / 2, 0), -Math.PI / 2);
+    add(L, H, stripMaterial(this.pano.tex, cut, L, panoLen, H, band0, bandH), new THREE.Vector3(-W / 2, H / 2, 0), Math.PI / 2);
+    const backPos = new THREE.Vector3(0, backH / 2, -L / 2);
+    const relief = MEDIA.relief && new URLSearchParams(location.search).get('relief') !== '0';
+    if (relief) {
+      // Test d'écran volumétrique sur le mur du fond : extrait RGBD (panorama recadré, voir MEDIA.relief)
+      const r = MEDIA.relief;
+      this.reliefVid = makeVideo(r.src);
+      this.reliefVid.tex.colorSpace = THREE.NoColorSpace; // couleur décodée dans le shader, profondeur brute
+      const pxPerM = r.panoPx / panoLen, s0 = (cut + L) * pxPerM - r.x, s1 = (cut + L + W) * pxPerM - r.x;
+      this.relief = reliefScreen(scene, { w: W, h: backH, position: backPos, tex: this.reliefVid.tex,
+        u0: s0 / r.w, u1: s1 / r.w, v1: backH / H, depth: r.depth });
+    } else {
+      add(W, backH, stripMaterial(this.pano.tex, cut + L, W, panoLen, backH, band0, bandH), backPos, 0);
+    }
+    add(L, H, stripMaterial(this.pano.tex, cut + L + W, L, panoLen, H, band0, bandH), new THREE.Vector3(W / 2, H / 2, 0), -Math.PI / 2);
     add(W, L, floorMaterial(this.floorVid.tex, (L / W) / (960 / 274)), new THREE.Vector3(0, 0, 0), 0, -Math.PI / 2);
 
     // Lumière émise par les écrans (mesurée, appliquée à la salle pré-éclairée) : une source par travée, une pour le fond, une pour le sol.
     // Couleur = moyenne de la portion d'image correspondante (1 colonne d'échantillon par mètre).
-    this.sampler = new SliceColors(this.pano.video, total);
+    this.sampler = new SliceColors(this.pano.video, Math.round(panoLen)); // 1 colonne par mètre de panorama
+    this.cut = cut;
     this.floorSampler = new SliceColors(this.floorVid.video, 1);
     this.lights = [];
     const bay = L / bays;
@@ -64,7 +80,7 @@ export class Screens {
     this.bandFrac = bandH / H;
   }
 
-  get videos() { return [this.pano.video, this.floorVid.video]; }
+  get videos() { return [this.pano.video, this.floorVid.video, this.reliefVid?.video].filter(Boolean); }
 
   update(frame) {
     if (frame % 6) return;
@@ -74,9 +90,9 @@ export class Screens {
     for (const o of this.lights) {
       if (o.s0 < 0) { o.color.copy(this.floorSampler.colors[0]); continue; }
       tmp.setRGB(0, 0, 0);
-      const a = Math.floor(o.s0), b = Math.ceil(o.s0 + o.len);
+      const a = Math.floor(o.s0 + this.cut), b = Math.ceil(o.s0 + this.cut + o.len);
       for (let i = a; i < b; i++) tmp.add(this.sampler.colors[i]);
-      o.color.copy(tmp.multiplyScalar(this.bandFrac / (b - a))); // seule la bande centrale émet
+      o.color.copy(tmp.multiplyScalar(this.bandFrac / (b - a)));
     }
     // moyennes par groupe pour la salle pré-éclairée : gauche, fond, droite, sol
     const avg = (list) => list.reduce((c, o) => c.add(o.color), new THREE.Color(0, 0, 0)).multiplyScalar(1 / list.length);

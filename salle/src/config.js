@@ -24,4 +24,8 @@ export const POV = {
 export const MEDIA = {
   panorama: '../videos/panorama_v5.webm', // bande continue : mur gauche -> fond -> mur droit
   floor: '../videos/ecran_06.webm',
+  // Test d'écran volumétrique (mur du fond) : salle/tools/depth_video.py, panorama 52–62 s,
+  // recadré sur 1080 px à partir de x = 1620 (la zone du mur du fond). ?relief=0 pour le désactiver.
+  // En pause : la vidéo de test n'est pas encore calculée (trop lent sur Mac, à reprendre).
+  relief: null, // { src: 'assets/test_rgbd.webm', panoPx: 4320, x: 1620, w: 1080, depth: 2.0 },
 };
