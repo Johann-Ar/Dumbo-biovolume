@@ -1237,9 +1237,7 @@
            ═══════════════════════════════════════════════════════════════ */
 
         /* Shared instruction card base — no background, clean floating */
-        .persistent-instructions,
-        .game-instructions,
-        .pause-instructions {
+        .game-instructions {
             background: transparent;
             padding: 0;
             border-radius: 0;
@@ -1253,35 +1251,18 @@
             gap: 12px;
         }
 
-        .persistent-instructions {
-            position: fixed;
-            bottom: 28px;
-            left: 24px;
-            top: auto;
-            min-width: 160px;
-            transition: opacity var(--transition-fade), visibility var(--transition-fade);
-        }
-
         .game-instructions {
             position: fixed;
             bottom: 28px;
             left: 24px;
             top: auto;
             min-width: 200px;
+            z-index: var(--z-pause-controls); /* reste au-dessus de l'écran Infos */
             opacity: 1;
             transition: opacity var(--transition-fade), visibility var(--transition-fade);
         }
         .game-instructions .instruction-line {
             transition: opacity 0.6s ease;
-        }
-
-        .pause-instructions {
-            position: fixed;
-            bottom: 28px;
-            left: 24px;
-            top: auto;
-            z-index: var(--z-pause-controls);
-            min-width: 200px;
         }
 
         /* Unified instruction line — CSS Grid for pixel-perfect alignment */
@@ -2013,9 +1994,7 @@
             }
 
             /* Cacher UI desktop */
-            .persistent-instructions,
-            .game-instructions,
-            .pause-instructions {
+            .game-instructions {
                 display: none !important;
             }
 
@@ -2109,7 +2088,10 @@
         }
 
         /* Paysage mobile */
-        @media (max-width: 768px) and (orientation: landscape) {
+        /* Téléphone en paysage : aussi les téléphones récents (> 768px de large en paysage),
+           repérés par leur faible hauteur + écran tactile */
+        @media (max-width: 768px) and (orientation: landscape),
+               (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
             /* En paysage le play est à droite, pas besoin du fond étendu */
             #welcome-screen::before {
                 display: none !important;
@@ -2121,14 +2103,22 @@
             }
             .welcome-logo-container {
                 top: calc(20px + env(safe-area-inset-top)) !important;
-                left: calc(60px + env(safe-area-inset-left)) !important;
+                left: calc(28px + env(safe-area-inset-left)) !important;
                 transform: translate(0, 0) !important;
             }
-            .welcome-content {
-                top: calc(20px + env(safe-area-inset-top)) !important;
-                left: calc(150px + env(safe-area-inset-left)) !important;
-                width: calc(60vw - 150px) !important;
+            /* Texte à droite du logo, sans le décalage -50% hérité du portrait */
+            .welcome-content,
+            body.hoverPlay .welcome-content {
+                top: calc(16px + env(safe-area-inset-top)) !important;
+                left: calc(48px + var(--logoSize) + env(safe-area-inset-left)) !important;
+                transform: none !important;
+                width: calc(100vw - 48px - var(--logoSize) - 190px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+                max-width: 520px !important;
+                max-height: calc(var(--real-vh, 1vh) * 100 - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
                 padding-bottom: 20px;
+            }
+            body.clickedPlay .welcome-content {
+                transform: translateY(10px) !important;
             }
             .play-button-container.mobile-play {
                 position: absolute !important;
@@ -2291,9 +2281,11 @@
         /* ── Boutons : style d'origine. Survol = léger grossissement + bleu ; clic/appui = bleu.
            Jamais de bleu au repos : l'état (son coupé, plein écran, panneau infos)
            se lit dans l'icône, pas dans la couleur. ── */
+        /* Repos : même fond que les badges/icônes des consignes */
+        .mute-button, .pause-close-btn, .lang-button,
         .mute-button.active-state, .pause-close-btn.active-state, .lang-button.active-state {
-            background: rgba(0,0,0,0.7);
-            border-color: var(--color-border);
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
         }
         .mute-button:hover, .pause-close-btn:hover, .lang-button:hover,
         .mute-button.active-state:hover, .pause-close-btn.active-state:hover, .lang-button.active-state:hover {
@@ -2344,22 +2336,92 @@
         .welcome-note-name { font-weight: 500; color: rgba(255,255,255,0.9); }
         .pause-credits span { display: block; }
 
+
+        /* ── Écran À propos : apparition / disparition ──
+           IMPORTANT : on ne fait PAS de fondu d'opacité sur #pause-screen. Un parent semi-transparent
+           devient la « racine » du backdrop-filter : le flou du panneau ne voit plus la scène 3D
+           pendant le fondu, puis « saute » d'un coup à la fin. Ici, le conteneur reste opaque
+           et ne fait que basculer sa visibilité ; chaque élément gère son propre fondu, et le fond
+           du panneau se construit progressivement (flou 0 → plein, teinte 0 → 55 %). ── */
+        #pause-screen,
+        #pause-screen.active {
+            opacity: 1;
+        }
+        #pause-screen {
+            transition: visibility 0s linear 0.38s;     /* reste visible le temps de la fermeture */
+        }
+        #pause-screen.active {
+            transition: visibility 0s linear 0s;
+        }
+
+        #pause-screen .pause-content {
+            transition:
+                opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.36s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.36s ease,
+                backdrop-filter 0.36s ease,
+                -webkit-backdrop-filter 0.36s ease;
+        }
+        #pause-screen.active .pause-content {
+            transition:
+                opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.5s ease,
+                backdrop-filter 0.5s ease,
+                -webkit-backdrop-filter 0.5s ease;
+        }
+        /* État fermé : panneau transparent, sans flou, légèrement plus bas */
+        #pause-screen:not(.active) .pause-content {
+            opacity: 0;
+            transform: translateY(14px);
+            background-color: rgba(0,0,0,0);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
+        }
+
+        /* Boutons et crédits : simple fondu (+ léger glissement des crédits) */
+        #pause-screen .pause-controls,
+        #pause-screen .pause-credits {
+            transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.36s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #pause-screen.active .pause-controls,
+        #pause-screen.active .pause-credits {
+            transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.06s, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
+        }
+        #pause-screen:not(.active) .pause-controls { opacity: 0; }
+        #pause-screen:not(.active) .pause-credits { opacity: 0; transform: translateX(-50%) translateY(8px); }
+
+        @media (prefers-reduced-motion: reduce) {
+            #pause-screen .pause-content, #pause-screen .pause-controls, #pause-screen .pause-credits {
+                transition: opacity 0.2s ease !important;
+            }
+            #pause-screen:not(.active) .pause-content { transform: none; }
+            #pause-screen:not(.active) .pause-credits { transform: translateX(-50%); }
+        }
+
         /* ── Ordinateur : toute l'interface ×1.25 + texte plus lisible ──
            Les tailles de texte sont plafonnées par la hauteur d'écran (vh)
            pour que l'accueil tienne sans défilement sur les petits portables. */
         @media (min-width: 769px) and (pointer: fine) {
+            /* --s = échelle calculée en JS : min(largeur/1440, hauteur/900), bornée.
+               Tout l'accueil (marges, logo, texte, Play) suit la même échelle :
+               les proportions restent identiques sur tous les formats d'écran PC. */
             :root {
-                --textLeft: 290px;
-                --textColW: 600px;
-                --logoSize: 195px;
-                --playRight: 90px;
-                --playBottom: 90px;
+                --textLeft: calc(290px * var(--s, 1));
+                --textColW: calc(600px * var(--s, 1));
+                --logoSize: calc(195px * var(--s, 1));
+                --playRight: calc(90px * var(--s, 1));
+                --playBottom: calc(90px * var(--s, 1));
             }
-            .welcome-content { max-width: 600px; }
-            .welcome-project-name { font-size: min(80px, 8.5vh); letter-spacing: 15px; -webkit-text-stroke: 1.4px currentColor; }
-            .welcome-title { font-size: min(27px, 3vh); letter-spacing: 2px; margin-bottom: min(32px, 3.4vh); }
+            .welcome-content {
+                max-width: var(--textColW);
+                max-height: calc(100vh - 80px * var(--s, 1));
+                max-height: calc(100dvh - 80px * var(--s, 1));
+            }
+            .welcome-project-name { font-size: calc(80px * var(--s, 1)); letter-spacing: calc(15px * var(--s, 1)); -webkit-text-stroke: calc(1.4px * var(--s, 1)) currentColor; }
+            .welcome-title { font-size: calc(27px * var(--s, 1)); letter-spacing: calc(2px * var(--s, 1)); margin-bottom: calc(32px * var(--s, 1)); }
             .welcome-text {
-                font-size: min(18px, 2.05vh);
+                font-size: calc(18px * var(--s, 1));
                 font-weight: 400;
                 line-height: 1.62;
                 color: rgba(255,255,255,0.86);
@@ -2368,17 +2430,17 @@
                 text-wrap: pretty;
                 hyphens: manual;
             }
-            .welcome-note { font-size: min(15px, 1.75vh); }
-            .welcome-context { font-size: min(13.5px, 1.6vh); margin-top: 1.2em; padding-top: 1.2em; }
+            .welcome-note { font-size: calc(15px * var(--s, 1)); }
+            .welcome-context { font-size: calc(13.5px * var(--s, 1)); margin-top: 1.2em; padding-top: 1.2em; }
 
-            .play-button-container { width: 200px; height: 200px; }
-            .play-button-container .play-rond { width: 200px; height: 200px; }
-            .play-button-container .play-fleche { width: 66px; height: 88px; }
+            .play-button-container { width: calc(200px * var(--s, 1)); height: calc(200px * var(--s, 1)); }
+            .play-button-container .play-rond { width: calc(200px * var(--s, 1)); height: calc(200px * var(--s, 1)); }
+            .play-button-container .play-fleche { width: calc(66px * var(--s, 1)); height: calc(88px * var(--s, 1)); }
 
-            .pause-content { max-width: 880px; padding: 60px; }
-            .pause-title { font-size: 22px; margin-bottom: 22px; }
+            .pause-content { max-width: calc(880px * var(--s, 1)); padding: calc(60px * var(--s, 1)); }
+            .pause-title { font-size: calc(22px * var(--s, 1)); margin-bottom: calc(22px * var(--s, 1)); }
             .pause-text {
-                font-size: 17.5px;
+                font-size: calc(17.5px * var(--s, 1));
                 font-weight: 400;
                 line-height: 1.65;
                 color: rgba(255,255,255,0.88);
@@ -2497,19 +2559,7 @@
         <button onclick="requestGyroPermission()" data-fr="Activer" data-en="Enable">Activer</button>
     </div>
 
-    <!-- Persistent Instructions (ALT + ESC — always visible in FPS mode) -->
-    <div class="persistent-instructions" id="persistent-instructions" style="opacity:0; visibility:hidden; pointer-events:none;">
-        <div class="instruction-line secondary" id="esc-fullscreen-instruction" style="opacity:0; visibility:hidden;">
-            <span class="key">ESC</span>
-            <span data-fr="Quitter le mode plein écran" data-en="Exit fullscreen mode">Quitter le mode plein écran</span>
-        </div>
-        <div class="instruction-line secondary">
-            <span class="key">ALT</span>
-            <span data-fr="Infos" data-en="Info">Infos</span>
-        </div>
-    </div>
-
-    <!-- Game Instructions (top-left, visible when on floor Y=11, hides after movement) -->
+    <!-- Consignes : bloc UNIQUE, visible en permanence en mode visite (jeu et écran Infos) -->
     <div class="game-instructions hidden" id="game-instructions">
         <div class="instruction-line">
             <!-- Mouse icon for looking around -->
@@ -2557,8 +2607,6 @@
 
             <p class="welcome-text" data-fr="À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus." data-en="At great depth, light no longer reaches. What remains is a residual, diffuse luminance carried by the water itself. The organisms that live there were never meant to be seen.">À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus.</p>
 
-            <p class="welcome-text" data-fr="Ces captations viennent d'engins téléopérés descendus à des milliers de mètres, dans des conditions de turbidité et de pression où l'image devient autant un document qu'une limite. On y voit des céphalopodes, des poissons cartilagineux, des silhouettes que les projecteurs du submersible tirent brièvement de l'obscurité." data-en="These recordings come from remotely operated vehicles sent thousands of metres down, where turbidity and pressure make the image as much a document as a limit. They show cephalopods, cartilaginous fish, and silhouettes briefly pulled from the darkness by the submersible's lights.">Ces captations viennent d'engins téléopérés descendus à des milliers de mètres, dans des conditions de turbidité et de pression où l'image devient autant un document qu'une limite. On y voit des céphalopodes, des poissons cartilagineux, des silhouettes que les projecteurs du submersible tirent brièvement de l'obscurité.</p>
-
             <p class="welcome-text" data-fr="Ce projet les traduit en volumes. La luminance de chaque image, porteuse des conditions d'éclairage du milieu, détermine le relief des formes exposées. Pas de reconstitution. Pas de fiction. Une tentative de donner du poids à ce qui résiste à l'image." data-en="This project translates them into volumes. The luminance of each image, which carries the lighting conditions of the environment, shapes the relief of the exposed forms. No reconstruction. No fiction. An attempt to give weight to what resists the image.">Ce projet les traduit en volumes. La luminance de chaque image, porteuse des conditions d'éclairage du milieu, détermine le relief des formes exposées. Pas de reconstitution. Pas de fiction. Une tentative de donner du poids à ce qui résiste à l'image.</p>
 
             <p class="welcome-note"><span class="welcome-note-name">Dumbo</span> · <i>Grimpoteuthis</i> spp. · <span data-fr="Pieuvres abyssales à nageoires, de 1 000 à 7 000 m. L'une des rares créatures des grands fonds entrées dans l'imaginaire collectif." data-en="Finned abyssal octopuses, from 1,000 to 7,000 m. One of the few deep-sea creatures to have entered the collective imagination.">Pieuvres abyssales à nageoires, de 1 000 à 7 000 m. L'une des rares créatures des grands fonds entrées dans l'imaginaire collectif.</span></p>
@@ -2581,27 +2629,6 @@
 
     <!-- Pause Screen (ESC / Infos) -->
     <div id="pause-screen">
-
-        <div class="pause-instructions">
-            <div class="instruction-line">
-                <!-- Mouse icon for looking around -->
-                <img class="instruction-svg" src="img/icone-souris.svg" width="40" height="40" alt="Souris">
-                <span data-fr="Regarder autour" data-en="Look around">Regarder autour</span>
-            </div>
-            <div class="instruction-line">
-                <!-- Arrow keys icon -->
-                <img class="instruction-svg" src="img/icone-fleches.svg" width="40" height="40" alt="Flèches">
-                <span data-fr="Se déplacer" data-en="Move">Se déplacer</span>
-            </div>
-            <div class="instruction-line secondary">
-                <span class="key">ESC</span>
-                <span data-fr="Quitter le plein écran" data-en="Exit fullscreen">Quitter le plein écran</span>
-            </div>
-            <div class="instruction-line secondary">
-                <span class="key">ALT</span>
-                <span data-fr="Infos" data-en="Info">Infos</span>
-            </div>
-        </div>
 
         <div class="pause-content" onclick="event.stopPropagation()">
             <h2 class="pause-title" data-fr="À propos" data-en="About">À propos</h2>
@@ -3072,6 +3099,17 @@
             document.documentElement.style.setProperty('--real-vh', vh + 'px');
         });
 
+        // ─── Échelle de l'interface desktop (maquette de référence 1440×900) ───
+        (function() {
+            function setUiScale() {
+                var sc = Math.min(window.innerWidth / 1440, window.innerHeight / 900);
+                sc = Math.max(0.62, Math.min(1.5, sc));
+                document.documentElement.style.setProperty('--s', sc.toFixed(4));
+            }
+            setUiScale();
+            window.addEventListener('resize', setUiScale);
+        })();
+
         // Mac : la touche ALT s'appelle Option — on adapte les badges d'instructions
         (function() {
             var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
@@ -3500,21 +3538,6 @@
             video.currentTime = pos * video.duration;
         }
 
-        // Fonction pour vérifier et cacher les instructions (niveau global pour scroll + clavier)
-        function checkHideInstructions() {
-            return; // Les instructions restent affichées en permanence
-            if (instructionsHidden) return;
-
-            // Conditions: au moins 2 touches distinctes OU au moins 3 scrolls
-            if (uniqueKeysPressed.size >= REQUIRED_UNIQUE_KEYS || scrollCount >= REQUIRED_SCROLLS) {
-                const instructionsElement = document.getElementById('game-instructions');
-                if (instructionsElement) {
-                    instructionsElement.classList.add('hidden');
-                    instructionsHidden = true;
-                }
-            }
-        }
-
         // Keyboard controls
         document.addEventListener('keydown', function(e) {
             // PRE-INIT: Block all keys except basic navigation until FPS mode initialized
@@ -3537,18 +3560,6 @@
                 if (!allowedKeys.includes(e.code)) {
                     // Block all other keys in Spectator mode
                     return;
-                }
-
-                // Track movement keys for instructions hiding
-                const movementKeys = [
-                    'KeyW', 'KeyA', 'KeyS', 'KeyD',
-                    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'
-                ];
-                if (movementKeys.includes(e.code) && !instructionsHidden) {
-                    uniqueKeysPressed.add(e.code);
-
-                    // Vérifier si les conditions sont remplies (touches + scrolls)
-                    checkHideInstructions();
                 }
             }
 
@@ -5436,12 +5447,6 @@
 
                 // Bloquer le scroll si en pause
                 if (isPaused) return;
-
-                // Compteur de scroll pour cacher les instructions
-                if (fpsMode && !instructionsHidden) {
-                    scrollCount++;
-                    checkHideInstructions();
-                }
 
                 // Accumuler la vitesse de scroll (au lieu d'appliquer directement)
                 const scrollSpeed = fpsSettings.fpsScrollSpeed;
@@ -9225,40 +9230,10 @@
             }
 
 
-            // Update game instructions visibility based on Y position
-            // Floor 11 is at Y=-111.773, with eye height 25, camera should be at Y≈-86.773
+            // Consignes : visibles en permanence en mode visite (y compris sur l'écran Infos)
             const instructionsElement = fpsDOMCache.gameInstructions;
-            let gameInstructionsVisible = false;
             if (instructionsElement) {
-                // Show instructions ONLY in FPS mode when on floor 11
-                if (fpsMode && !isPaused) {
-                    const expectedCameraY = FLOOR_BASE_Y + fpsSettings.fpsPlayerHeight;
-                    const tolerance = 8;
-
-                    const isOnFloor11 = Math.abs(camera.position.y - expectedCameraY) < tolerance;
-
-                    // Toujours affichées en mode visite (plus de condition sol / interactions)
-                    if (true) {
-                        // Show instructions until user interacts enough
-                        instructionsElement.classList.remove('hidden');
-                        gameInstructionsVisible = true;
-                    } else {
-                        instructionsElement.classList.add('hidden');
-                    }
-                } else {
-                    // Hide instructions in admin mode or when paused
-                    instructionsElement.classList.add('hidden');
-                }
-            }
-
-            // Show persistent instructions (ALT + ESC) in FPS mode, hide when paused
-            // Also hide when game-instructions is visible to avoid overlap
-            const persistentInstr = document.getElementById('persistent-instructions');
-            if (persistentInstr) {
-                const showPersistent = fpsMode && !isPaused && !gameInstructionsVisible;
-                persistentInstr.style.opacity = showPersistent ? '1' : '0';
-                persistentInstr.style.visibility = showPersistent ? 'visible' : 'hidden';
-                persistentInstr.style.pointerEvents = showPersistent ? '' : 'none';
+                instructionsElement.classList.toggle('hidden', !fpsMode);
             }
 
             if (animateFrameCount === 1) {
@@ -9603,11 +9578,6 @@
 
         // Instructions timer (hide after 5 seconds)
         // Track keyboard interactions instead of time
-        let uniqueKeysPressed = new Set();
-        let scrollCount = 0; // Compteur de scrolls pour cacher les instructions
-        let instructionsHidden = false;
-        const REQUIRED_UNIQUE_KEYS = 2;  // Au moins 2 touches distinctes
-        const REQUIRED_SCROLLS = 3;      // Au moins 3 scrolls après les touches
         const KEY_HOLD_DURATION = 1000;  // Ou 1 touche maintenue ≥ 1 seconde
         let keyHoldTimer = null;
         let keyHoldStartTime = null;
@@ -10056,12 +10026,6 @@
             isPaused = true;
             document.getElementById('pause-screen').classList.add('active');
 
-            // Cacher les instructions persistantes/game pour éviter la superposition
-            const persistInstr = document.getElementById('persistent-instructions');
-            const gameInstr = document.getElementById('game-instructions');
-            if (persistInstr) { persistInstr.style.opacity = '0'; persistInstr.style.visibility = 'hidden'; }
-            if (gameInstr) { gameInstr.style.opacity = '0'; gameInstr.style.visibility = 'hidden'; }
-
             // Show cursor when info panel is visible
             document.body.classList.remove('fps-cursor-hidden');
 
@@ -10100,13 +10064,6 @@
 
             isPaused = false;
             document.getElementById('pause-screen').classList.remove('active');
-
-            // Restaurer les instructions persistantes/game
-            const persistInstr = document.getElementById('persistent-instructions');
-            const gameInstr = document.getElementById('game-instructions');
-            if (persistInstr) { persistInstr.style.opacity = ''; persistInstr.style.visibility = ''; }
-            // Toujours restaurer : la boucle de rendu gère ensuite l'affichage via la classe .hidden
-            if (gameInstr) { gameInstr.style.opacity = ''; gameInstr.style.visibility = ''; }
 
             // Hide cursor when resuming FPS experience
             if (fpsMode && !isMobile) {
@@ -11541,10 +11498,6 @@
 
         function updateEscInstructionVisibility() {
             const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
-            const escInstr = document.getElementById('esc-fullscreen-instruction');
-            if (escInstr) { escInstr.style.opacity = isFS ? '1' : '0'; escInstr.style.visibility = isFS ? 'visible' : 'hidden'; }
-            const pauseEscInstr = document.getElementById('pause-esc-fullscreen-instruction');
-            if (pauseEscInstr) { pauseEscInstr.style.opacity = isFS ? '1' : '0'; pauseEscInstr.style.visibility = isFS ? 'visible' : 'hidden'; }
             document.querySelectorAll('.esc-fs-instr').forEach(function(el) { el.style.display = isFS ? '' : 'none'; });
         }
 
