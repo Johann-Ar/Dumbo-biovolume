@@ -10,7 +10,7 @@ const params = new URLSearchParams(location.search);
 
 // ---------- Rendu ----------
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -19,7 +19,11 @@ document.getElementById('app').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
-const camera = new THREE.PerspectiveCamera(POV.fov, innerWidth / innerHeight, 0.03, 200);
+// En portrait (téléphone, comme une vidéo filmée en vertical), on garde un champ horizontal
+// d'au moins 56° au lieu de réduire la salle à une fente.
+const fovFor = (aspect) => aspect >= 1 ? POV.fov
+  : Math.min(100, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(28)) / aspect)));
+const camera = new THREE.PerspectiveCamera(fovFor(innerWidth / innerHeight), innerWidth / innerHeight, 0.03, 200);
 scene.add(camera);
 
 const spark = new SparkRenderer({ renderer });
@@ -63,6 +67,7 @@ const useFx = params.get('fx') !== '0';
 // ---------- Entrée ----------
 const intro = document.getElementById('intro');
 const hud = document.getElementById('hud');
+if (matchMedia('(pointer: coarse)').matches) hud.textContent = 'Glisser à gauche : marcher · glisser à droite : regarder';
 function enter() {
   screens.videos.forEach((v) => v.play().catch(() => {}));
   intro.classList.add('hidden');
@@ -76,6 +81,7 @@ if (params.has('auto')) enter();
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
+  camera.fov = fovFor(camera.aspect);
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   fx.resize();
@@ -106,7 +112,7 @@ renderer.setAnimationLoop(() => {
 
   fx.lens.uniforms.uTime.value = t;
   // Flou de mouvement : décalage de l'image pendant la moitié d'une image (obturateur à 180°)
-  const tv = Math.tan(THREE.MathUtils.degToRad(POV.fov / 2));
+  const tv = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const dYaw = camera.rotation.y - prevYaw, dPitch = camera.rotation.x - prevPitch;
   prevYaw = camera.rotation.y; prevPitch = camera.rotation.x;
   fx.lens.uniforms.uBlur.value.set(-dYaw / tv * 0.5, dPitch / tv * 0.5);
