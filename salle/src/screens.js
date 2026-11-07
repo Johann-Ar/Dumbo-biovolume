@@ -35,7 +35,7 @@ function floorMaterial(tex, crop) {
 
 export class Screens {
   constructor(scene) {
-    const { length: L, width: W, height: H, bays } = ROOM;
+    const { length: L, width: W, height: H, bays, backH } = ROOM;
     this.pano = makeVideo(MEDIA.panorama);
     this.floorVid = makeVideo(MEDIA.floor);
     const total = 2 * L + W;                    // 50 m de bande
@@ -44,7 +44,7 @@ export class Screens {
 
     const add = (w, h, m, pos, ry, rx = 0) => { const o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); o.position.copy(pos); o.rotation.set(rx, ry, 0, 'YXZ'); scene.add(o); return o; };
     add(L, H, stripMaterial(this.pano.tex, 0, L, total, H, band0, bandH), new THREE.Vector3(-W / 2, H / 2, 0), Math.PI / 2);
-    add(W, H, stripMaterial(this.pano.tex, L, W, total, H, band0, bandH), new THREE.Vector3(0, H / 2, -L / 2), 0);
+    add(W, backH, stripMaterial(this.pano.tex, L, W, total, backH, band0, bandH), new THREE.Vector3(0, backH / 2, -L / 2), 0);
     add(L, H, stripMaterial(this.pano.tex, L + W, L, total, H, band0, bandH), new THREE.Vector3(W / 2, H / 2, 0), -Math.PI / 2);
     add(W, L, floorMaterial(this.floorVid.tex, (L / W) / (960 / 274)), new THREE.Vector3(0, 0, 0), 0, -Math.PI / 2);
 
@@ -58,7 +58,7 @@ export class Screens {
       this.lights.push({ color: new THREE.Color(), s0, len, center: pos.clone(), normal, area: w * h });
     };
     for (let k = 0; k < bays; k++) light(bay, H, new THREE.Vector3(-W / 2, H / 2, L / 2 - (k + 0.5) * bay), new THREE.Vector3(1, 0, 0), k * bay, bay);
-    light(W, H, new THREE.Vector3(0, H / 2, -L / 2), new THREE.Vector3(0, 0, 1), L, W);
+    light(W, backH, new THREE.Vector3(0, backH / 2, -L / 2), new THREE.Vector3(0, 0, 1), L, W);
     for (let k = 0; k < bays; k++) light(bay, H, new THREE.Vector3(W / 2, H / 2, -L / 2 + (k + 0.5) * bay), new THREE.Vector3(-1, 0, 0), L + W + k * bay, bay);
     light(W, L, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0), -1, 0);
     this.bandFrac = bandH / H;

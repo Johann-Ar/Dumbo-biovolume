@@ -83,7 +83,7 @@ addEventListener('resize', () => {
 
 // ---------- Boucle ----------
 const clock = new THREE.Clock();
-let frame = 0, exposure = 1.2, nextCapture = 0.5;
+let frame = 0, exposure = 1.2, nextCapture = 0.5, prevYaw = 0, prevPitch = 0;
 const stats = { fps: 0, acc: 0, n: 0 };
 
 renderer.setAnimationLoop(() => {
@@ -105,6 +105,11 @@ renderer.setAnimationLoop(() => {
   if (t > nextCapture) { captureEnv(); nextCapture = t + (t < 10 ? 2 : 6); }
 
   fx.lens.uniforms.uTime.value = t;
+  // Flou de mouvement : décalage de l'image pendant la moitié d'une image (obturateur à 180°)
+  const tv = Math.tan(THREE.MathUtils.degToRad(POV.fov / 2));
+  const dYaw = camera.rotation.y - prevYaw, dPitch = camera.rotation.x - prevPitch;
+  prevYaw = camera.rotation.y; prevPitch = camera.rotation.x;
+  fx.lens.uniforms.uBlur.value.set(-dYaw / tv * 0.5, dPitch / tv * 0.5);
   if (useFx) fx.composer.render(); else renderer.render(scene, camera);
 
   stats.acc += dt; stats.n++;

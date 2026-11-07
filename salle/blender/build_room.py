@@ -3,7 +3,7 @@
 Usage : blender -b -P salle/blender/build_room.py -- <dossier_sortie> [taille_lightmap] [samples]
 
 Sorties :
-  room.glb      structure hors écrans (joints, caisson, projecteurs, plafond, murs hauts, entrée, couloir),
+  room.glb      structure hors écrans (joints, plafond, barres et projecteurs, retombée, entrée, couloir),
                 une seule carte UV (celle de la lightmap), un matériau par type de surface
   room_lm_a.png lumière reçue des écrans : R = mur gauche, V = fond, B = mur droit
   room_lm_b.png lumière reçue du sol (canal R)
@@ -24,8 +24,10 @@ os.makedirs(OUT, exist_ok=True)
 
 # --- Dimensions (identiques à config.js) ---
 L, W, H, BAYS, POST = 21.0, 8.0, 9.0, 4, 0.28
-CAN_W, CAN_D, CAN_IN = 4.8, 0.6, 0.5
-CEIL = 10.5
+BARS = 5
+SOFFIT_H, SOFFIT_D = 1.6, 0.8
+BACK_H = H - SOFFIT_H   # écran du fond, sous la retombée
+CEIL = H
 DOOR_W, DOOR_H, CORR = 2.0, 2.6, 4.0
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -40,7 +42,7 @@ def mat(name, color=(0.8, 0.8, 0.8)):
     m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*color, 1)
     return m
 
-MATS = {n: mat(n) for n in ('post', 'canopy', 'projector', 'ceiling', 'wall')}
+MATS = {n: mat(n) for n in ('post', 'rig', 'projector', 'ceiling', 'seam', 'soffit', 'wall')}
 structure = []
 
 def box(w, h, d, m, x, y, z):
@@ -74,27 +76,22 @@ for k in range(BAYS + 1):
 for s in (-1, 1):
     box(POST, H, FL, 'post', s * (W / 2 - POST / 2), H / 2, -L / 2 + FL / 2)
 
-# Caisson suspendu + grille + projecteurs
-cy, cl, cw, m = H - CAN_D / 2, L - 2 * CAN_IN, CAN_W, 0.1
-for s in (-1, 1):
-    box(m, CAN_D, cl, 'canopy', s * cw / 2, cy, 0)
-    box(cw, CAN_D, m, 'canopy', 0, cy, s * cl / 2)
-box(cw, 0.04, cl, 'canopy', 0, H, 0)
-for i in range(1, 12):
-    box(cw, 0.05, 0.05, 'canopy', 0, H - CAN_D, -cl / 2 + i * cl / 12)
-for i in range(1, 4):
-    box(0.05, 0.05, cl, 'canopy', -cw / 2 + i * cw / 4, H - CAN_D, 0)
-for i in range(6):
-    z = -cl / 2 + (i + 0.5) * cl / 6
-    for s in (-1, 1):
-        box(0.45, 0.22, 0.5, 'projector', s * (cw / 2 - 0.45), H - CAN_D - 0.14, z)
-
-# Plafond d'origine (face vers le bas) et bandeau de murs au-dessus des écrans
-plane(W, L, 'ceiling', P(0, CEIL, 0), (math.pi, 0, 0))
-bh, by = CEIL - H, H + (CEIL - H) / 2
-plane(bh, L, 'wall', P(-W / 2, by, 0), (0, R90, 0))
-plane(bh, L, 'wall', P(W / 2, by, 0), (0, -R90, 0))
-plane(W, bh, 'wall', P(0, by, -L / 2), (R90, 0, 0))
+# Plafond réel (photos) : plat, gris clair, sur toute la largeur au niveau du haut des écrans,
+# joints de panneaux dans la longueur ; barres transversales fines portant les projecteurs ;
+# deux rails fins le long des côtés ; retombée brun foncé au-dessus du mur du fond.
+plane(W, L, 'ceiling', P(0, H, 0), (math.pi, 0, 0))
+for i in range(1, 13):
+    box(0.025, 0.012, L, 'seam', -W / 2 + i * W / 13, H - 0.006, 0)
+for s_ in (-1, 1):
+    box(0.06, 0.06, L - SOFFIT_D, 'rig', s_ * (W / 2 - 0.45), H - 0.35, SOFFIT_D / 2)
+for i in range(BARS):
+    z = L / 2 - (i + 0.5) * (L - SOFFIT_D) / BARS
+    box(W - 0.6, 0.06, 0.06, 'rig', 0, H - 0.5, z)
+    for s_ in (-1, 1):
+        box(0.03, 0.5, 0.03, 'rig', s_ * (W / 2 - 1.2), H - 0.25, z)
+    for x in (-W / 4, 0, W / 4):
+        box(0.4, 0.2, 0.45, 'projector', x, H - 0.64, z)
+box(W, SOFFIT_H, SOFFIT_D, 'soffit', 0, H - SOFFIT_H / 2, -L / 2 + SOFFIT_D / 2)
 
 # Côté entrée : mur avec porte, couloir (faces vers l'intérieur, sans la face côté salle)
 sw = (W - DOOR_W) / 2
@@ -123,7 +120,7 @@ def emitter(name):
 EMIT = {g: emitter('e_' + g) for g in ('left', 'back', 'right', 'floor')}
 plane(H, L, EMIT['left'][0], P(-W / 2, H / 2, 0), (0, R90, 0), store=False)
 plane(H, L, EMIT['right'][0], P(W / 2, H / 2, 0), (0, -R90, 0), store=False)
-plane(W, H, EMIT['back'][0], P(0, H / 2, -L / 2), (R90, 0, 0), store=False)
+plane(W, BACK_H, EMIT['back'][0], P(0, BACK_H / 2, -L / 2), (R90, 0, 0), store=False)
 plane(W, L, EMIT['floor'][0], P(0, 0, 0), (0, 0, 0), store=False)
 
 # --- Fusion de la structure + UV de lightmap ---

@@ -8,9 +8,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const SURFACES = {
   post: { color: 0x0b0b0c, roughness: 0.55, metalness: 0.0 },
-  canopy: { color: 0x3a3d42, roughness: 0.45, metalness: 0.8 },
-  projector: { color: 0x1a1b1e, roughness: 0.55, metalness: 0.2 },
-  ceiling: { color: 0x3b2a1e, roughness: 0.85, metalness: 0.0 },
+  rig: { color: 0x2a2c30, roughness: 0.5, metalness: 0.6 },        // barres et rails des projecteurs
+  projector: { color: 0x141518, roughness: 0.55, metalness: 0.2 },
+  ceiling: { color: 0x9a9a98, roughness: 0.8, metalness: 0.0 },     // plafond gris clair
+  seam: { color: 0x5a5a5a, roughness: 0.8, metalness: 0.0 },        // joints de panneaux
+  soffit: { color: 0x2e2018, roughness: 0.8, metalness: 0.0 },      // retombée brun foncé
   wall: { color: 0x1b1b1d, roughness: 0.95, metalness: 0.0 },
 };
 

@@ -17,11 +17,12 @@ const LensShader = {
     uVig: { value: 0.55 },
     uGrain: { value: 0.06 },
     uAspect: { value: 1 },
+    uBlur: { value: new THREE.Vector2() }, // flou de mouvement (en unités p) pendant les rotations de tête
     uRes: { value: new THREE.Vector2(1, 1) },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: /* glsl */`
-    uniform sampler2D tDiffuse; uniform float uTime, uK, uCA, uVig, uGrain, uAspect; uniform vec2 uRes;
+    uniform sampler2D tDiffuse; uniform float uTime, uK, uCA, uVig, uGrain, uAspect; uniform vec2 uRes, uBlur;
     varying vec2 vUv;
     float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
     vec2 warp(vec2 p, float k){
@@ -34,10 +35,15 @@ const LensShader = {
       vec2 p = (vUv - 0.5) * 2.0; p.x *= uAspect;
       float r2 = dot(p, p);
       float ca = uCA * r2;
-      vec3 col;
-      col.r = texture2D(tDiffuse, toUv(warp(p, uK + ca))).r;
-      col.g = texture2D(tDiffuse, toUv(warp(p, uK))).g;
-      col.b = texture2D(tDiffuse, toUv(warp(p, uK - ca))).b;
+      vec3 col = vec3(0.0);
+      // obturateur ouvert pendant une demi-image : 8 échantillons le long du déplacement
+      for (int i = 0; i < 8; i++) {
+        vec2 q = p + uBlur * (float(i) / 7.0 - 0.5);
+        col.r += texture2D(tDiffuse, toUv(warp(q, uK + ca))).r;
+        col.g += texture2D(tDiffuse, toUv(warp(q, uK))).g;
+        col.b += texture2D(tDiffuse, toUv(warp(q, uK - ca))).b;
+      }
+      col /= 8.0;
       float vig = smoothstep(2.2, 0.3, length(p * vec2(1.0 / uAspect * 0.9, 1.0)) * 1.25);
       col *= mix(1.0, vig, uVig);
       float n = hash(vUv * uRes + fract(uTime * 37.0) * 100.0) - 0.5;

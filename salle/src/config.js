@@ -6,8 +6,8 @@ export const ROOM = {
   height: 9,         // écrans du sol jusqu'en haut
   bays: 4,           // travées par mur long
   post: 0.28,        // montants noirs (section carrée)
-  canopy: { width: 4.8, depth: 0.6, inset: 0.5 }, // caisson suspendu ≈ 60 % de la largeur
-  ceilH: 10.5,       // plafond d'origine, au-dessus du caisson
+  soffit: { h: 1.6, d: 0.8 }, // retombée brun foncé au-dessus du mur du fond
+  backH: 7.4,        // écran du fond, sous la retombée (height - soffit.h)
   door: { w: 2.0, h: 2.6 },
   corridorLen: 4.0,
 };
