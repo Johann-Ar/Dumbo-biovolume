@@ -1,6 +1,5 @@
 salle/assets/room_splat.ply
 salle/assets/visitors_splat.ply
-salle/assets/visitors/
 .DS_Store
 __pycache__/
 *.log
