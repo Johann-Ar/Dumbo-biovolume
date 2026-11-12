@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Images des créatures</title>
+<style>
+  html { background: #0b0c10; } body { margin: 0; color: #cfd6e4; font: 13px/1.4 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; padding: 12px 16px; background: #0b0c10ee; border-bottom: 1px solid #222; }
+  nav { display: flex; flex-wrap: wrap; gap: 4px 0; margin-top: 8px; max-height: 64px; overflow: auto; }
+  header b { color: #fff; }
+  .leg span { display: inline-block; padding: 1px 6px; border-radius: 4px; margin-right: 6px; }
+  .vous { background: rgba(255, 50, 40, .55); }
+  .auto { background: rgba(255, 50, 40, .35); outline: 2px dashed #ff6a5a; outline-offset: -2px; }
+  #etat { float: right; color: #7fd69a; }
+  #etat.mal { color: #ff8a7a; }
+  section { padding: 12px 16px 24px; border-bottom: 1px solid #1d2028; scroll-margin-top: 120px; }
+  h2 { margin: 0 0 4px; font-size: 15px; color: #fff; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  h2 button { font: inherit; font-size: 12px; font-weight: 400; color: #cfd6e4; background: #1a1d26; border: 1px solid #333; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+  h2 button:hover { background: #262a36; }
+  .info { margin-bottom: 8px; color: #8fa0bb; }
+  .info .mal { color: #ff8a7a; } .info .ok { color: #7fd69a; }
+  .planche { position: relative; display: inline-block; max-width: 100%; cursor: pointer; user-select: none; }
+  .planche img { display: block; max-width: 100%; }
+  .m { position: absolute; pointer-events: none; box-sizing: border-box; }
+  .m.auto::after { content: 'auto'; position: absolute; right: 2px; bottom: 1px; font-size: 9px; color: #fff; }
+  .num { position: absolute; font-size: 9px; color: #fff8; padding: 1px 3px; pointer-events: none; }
+  nav a { color: #8fb4ff; margin-right: 10px; text-decoration: none; white-space: nowrap; }
+  nav a.off { color: #ff8a7a; text-decoration: line-through; }
+</style>
+</head>
+<body>
+<header>
+  <span id="etat"></span>
+  <b>Images des créatures</b>, dans l'ordre de lecture (de gauche à droite, puis ligne par ligne).
+  <div class="leg">
+    <span class="vous">rouge</span> pas bonne (vos choix)
+    <span class="auto">rouge pointillé « auto »</span> défaut que j'ai détecté (saut du détourage ou du relief).
+    <b>Clic</b> : marquer / démarquer une image. <b>Maj + clic</b> : toute la suite depuis le clic précédent.
+    La salle ne lit que la <b>plus longue suite d'images bonnes</b> (au moins 1,5 s, sinon la créature est retirée).
+    Enregistré tout seul.</div>
+  <nav id="nav"></nav>
+</header>
+<div id="liste"></div>
+<script>
+(async () => {
+  const D = await fetch('tableau_creatures/defauts.json', { cache: 'no-store' }).then((r) => r.json());
+  const M = await fetch('assets/creatures_mauvaises.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : {}, () => ({}));
+  const nav = document.getElementById('nav'), liste = document.getElementById('liste'), etat = document.getElementById('etat');
+  const MIN = 45;   // 1,5 s : en dessous, la salle retire la créature
+  let minuterie = null;
+  const enregistre = () => {
+    clearTimeout(minuterie); etat.textContent = 'enregistrement…'; etat.className = '';
+    minuterie = setTimeout(async () => {
+      try {
+        const r = await fetch('/enregistre-creatures', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(M) });
+        if (!r.ok) throw new Error(r.status);
+        etat.textContent = 'enregistré'; etat.className = '';
+      } catch (e) { etat.textContent = 'non enregistré (' + e.message + ')'; etat.className = 'mal'; }
+    }, 400);
+  };
+  // plus longue suite d'images bonnes (la même règle que la salle)
+  const plage = (n, N) => {
+    const mal = new Set([...(M[n]?.vous ?? []), ...(M[n]?.auto ?? [])]);
+    let best = null, s = null;
+    for (let i = 0; i <= N; i++) {
+      if (i < N && !mal.has(i)) { if (s === null) s = i; }
+      else if (s !== null) { if (!best || i - s > best[1] - best[0] + 1) best = [s, i - 1]; s = null; }
+    }
+    return best && best[1] - best[0] + 1 >= MIN ? best : null;
+  };
+  for (const [nom, d] of Object.entries(D)) {
+    M[nom] ??= { vous: [], auto: [] };
+    const a = document.createElement('a'); a.href = '#' + nom; a.textContent = nom; nav.appendChild(a);
+    const s = document.createElement('section'); s.id = nom;
+    s.innerHTML = `<h2>${nom} <button data-k="tout">tout pas bon</button> <button data-k="rien">tout bon</button></h2><div class="info"></div>`;
+    const info = s.querySelector('.info');
+    const p = document.createElement('div'); p.className = 'planche';
+    const img = new Image(); img.src = `tableau_creatures/${nom}.jpg`; img.loading = 'lazy'; p.appendChild(img);
+    const rows = Math.ceil(d.images / d.cols), pw = d.cols * d.lw, ph = rows * d.lh;
+    const pos = (i) => ({ left: (i % d.cols) * d.lw / pw * 100 + '%', top: Math.floor(i / d.cols) * d.lh / ph * 100 + '%', width: d.lw / pw * 100 + '%', height: d.lh / ph * 100 + '%' });
+    for (let i = 0; i < d.images; i++) { const n = document.createElement('div'); n.className = 'num'; n.textContent = i; const q = pos(i); n.style.left = q.left; n.style.top = q.top; p.appendChild(n); }
+    const calque = document.createElement('div'); p.appendChild(calque);
+    const dessine = () => {
+      calque.innerHTML = '';
+      const vous = new Set(M[nom].vous), auto = new Set(M[nom].auto);
+      for (let i = 0; i < d.images; i++) {
+        const c = vous.has(i) ? 'vous' : auto.has(i) ? 'auto' : null;
+        if (!c) continue;
+        const m = document.createElement('div'); m.className = 'm ' + c; Object.assign(m.style, pos(i)); calque.appendChild(m);
+      }
+      const pl = plage(nom, d.images);
+      info.innerHTML = `${d.images} images (${(d.images / 30).toFixed(1)} s) · ` + (pl
+        ? `<span class="ok">la salle lit ${pl[0]} → ${pl[1]} (${((pl[1] - pl[0] + 1) / 30).toFixed(1)} s)</span>`
+        : `<span class="mal">retirée de la salle (pas 1,5 s d'images bonnes à la suite)</span>`) +
+        ` · pas bonnes : ${vous.size + auto.size}${auto.size ? ` (dont ${auto.size} auto)` : ''}`;
+      a.className = pl ? '' : 'off';
+    };
+    let dernier = null;
+    const bascule = (i, mettre) => {
+      const v = new Set(M[nom].vous), au = new Set(M[nom].auto);
+      if (mettre) v.add(i); else { v.delete(i); au.delete(i); }
+      M[nom].vous = [...v].sort((x, y) => x - y); M[nom].auto = [...au].sort((x, y) => x - y);
+    };
+    p.addEventListener('click', (e) => {
+      const r = img.getBoundingClientRect();
+      const col = Math.floor((e.clientX - r.left) / r.width * d.cols), lig = Math.floor((e.clientY - r.top) / r.height * rows);
+      const i = lig * d.cols + col;
+      if (col < 0 || col >= d.cols || i < 0 || i >= d.images) return;
+      const estMal = M[nom].vous.includes(i) || M[nom].auto.includes(i);
+      if (e.shiftKey && dernier) {
+        const [j, mettre] = dernier;
+        for (let k = Math.min(i, j); k <= Math.max(i, j); k++) bascule(k, mettre);
+      } else { bascule(i, !estMal); dernier = [i, !estMal]; }
+      dessine(); enregistre();
+    });
+    s.querySelector('[data-k=tout]').onclick = () => { for (let i = 0; i < d.images; i++) bascule(i, true); dessine(); enregistre(); };
+    s.querySelector('[data-k=rien]').onclick = () => { M[nom].vous = []; M[nom].auto = []; dessine(); enregistre(); };
+    s.appendChild(p); liste.appendChild(s); dessine();
+  }
+})();
+</script>
+</body>
+</html>

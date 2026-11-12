@@ -2,6 +2,9 @@
 <html>
 <head>
     <meta charset="UTF-8">
+<script>/* Adresse sans « / » final (…/Dumbo-biovolume) : les liens internes partiraient vers la racine du compte (404). */
+if (!location.pathname.endsWith('/') && !/\.[a-z0-9]+$/i.test(location.pathname)) location.replace(location.pathname + '/' + location.search + location.hash);</script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -9,9 +12,9 @@
     <title>Dumbo</title>
 
     <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="img/presences_rares_favicon_v2.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="img/presences_rares_favicon_v2.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="img/presences_rares_favicon_v2.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="img/presences_rares_logo_lisse_256.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="img/presences_rares_logo_lisse_256.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="img/presences_rares_logo_lisse_256.png">
 
 
     <!-- Fonts -->
@@ -2595,14 +2598,14 @@
                  Affichée directement (décodage + composition GPU) : elle reste fluide
                  même quand le JS génère la scène. Plus de recopie dans un canvas. -->
             <video class="welcome-logo-poulpe" id="welcome-logo-poulpe" loop muted playsinline preload="auto">
-                <source src="videos/poulpe_icone_chargement_desktop.mp4" type="video/mp4">
+                <source src="videos/poulpe_icone_chargement_lisse.mp4" type="video/mp4">
             </video>
         </div>
 
         <div class="welcome-content" id="welcome-content">
             <span class="welcome-project-name">DUMBO</span>
             <h1 class="welcome-title">
-                <span data-fr="Présences aquatiques rares" data-en="Rare aquatic presences">Présences aquatiques rares</span>
+                <span data-fr="Présences abyssales rares" data-en="Rare abyssal presences">Présences abyssales rares</span>
             </h1>
 
             <p class="welcome-text" data-fr="À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus." data-en="At great depth, light no longer reaches. What remains is a residual, diffuse luminance carried by the water itself. The organisms that live there were never meant to be seen.">À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus.</p>
@@ -9633,10 +9636,10 @@
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
                         title: 'Dumbo',
-                        artist: 'Présences aquatiques rares',
+                        artist: 'Présences abyssales rares',
                         album: 'Maquette de dispositif d\'exposition',
                         artwork: [
-                            { src: 'img/presences_rares_favicon_v2.png', sizes: '180x180', type: 'image/png' }
+                            { src: 'img/presences_rares_logo_lisse_256.png', sizes: '180x180', type: 'image/png' }
                         ]
                     });
                 }

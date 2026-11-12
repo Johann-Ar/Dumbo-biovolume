@@ -1,0 +1,16 @@
+salle/assets/room_splat.ply
+salle/assets/visitors_splat.ply
+salle/assets/visitors/
+.DS_Store
+__pycache__/
+*.log
+salle/target/
+salle/bake_*/
+salle/assets/avant_*/
+salle/assets/creatures/
+salle/assets/visitors_20/
+salle/assets/visitors_80/
+salle/assets/visitors_avant_noirs/
+salle/assets/room_splat.avant_flottants*
+salle/assets/test_rgbd.*
+salle/blender/*_avant_*.py

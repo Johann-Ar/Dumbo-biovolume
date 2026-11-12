@@ -2,47 +2,279 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
+<script>/* Adresse sans « / » final (…/Dumbo-biovolume) : les liens internes partiraient vers la racine du compte (404). */
+if (!location.pathname.endsWith('/') && !/\.[a-z0-9]+$/i.test(location.pathname)) location.replace(location.pathname + '/' + location.search + location.hash);</script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Présences rares — la salle</title>
-  <link rel="icon" href="../img/presences_rares_favicon_v2.png">
+  <title>Dumbo - Présences abyssales rares</title>
+  <link rel="icon" href="../img/presences_rares_logo_lisse_256.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    :root { --ink: #d8e4ee; --dim: rgba(216, 228, 238, 0.55); }
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: var(--ink);
-      font-family: ui-sans-serif, -apple-system, "Helvetica Neue", Arial, sans-serif; }
+    /* Page d'accueil d'origine du site (DUMBO), reprise devant la salle : voile flou qui se retire au
+       survol du bouton, bouton Play tournant, poulpe qui sert d'icône de chargement.
+       Améliorations : le bouton attend la fin du chargement, transitions uniquement sur le GPU. */
+    :root {
+      --textLeft: 240px; --textColW: 480px; --logoSize: 156px; --playRight: 80px; --playBottom: 80px;
+      --clickTextExitX: 320px; --clickFadeMs: 320ms; --logoMoveMs: 420ms;
+      /* Typographie du site du Musée océanographique (oceano.org) : Helvetica Now Text, police commerciale
+         sous licence du musée, non copiée ici. Elle est utilisée si elle est installée ; sinon Helvetica Neue
+         (Mac, iPhone), puis Inter, sa plus proche équivalente libre. Une seule famille, comme sur leur site. */
+      --sans: 'Helvetica Now Text', 'Helvetica Now', 'Helvetica Neue', Helvetica, 'Inter', Arial, sans-serif;
+      --mono: var(--sans);
+      --dim: rgba(255,255,255,.62); --line: rgba(255,255,255,.12); --blue: rgba(100,150,255,.35); --blue-b: rgba(100,150,255,.8);
+    }
+    @media (max-width: 768px) {
+      :root { --textLeft: clamp(20px, 5vw, 40px); --textColW: calc(100vw - clamp(40px, 10vw, 80px));
+              --playRight: clamp(30px, 8vw, 60px); --playBottom: clamp(40px, 8vh, 80px);
+              --logoSize: clamp(88px, 23vw, 108px); --clickTextExitX: 100px; }
+    }
+    @media (min-width: 1700px) {
+      :root { --textLeft: 290px; --textColW: 600px; --logoSize: 195px; --playRight: 90px; --playBottom: 90px; }
+    }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: #fff; font-family: var(--sans); }
     #app, canvas { position: fixed; inset: 0; display: block; touch-action: none; }
-    #intro { position: fixed; inset: 0; display: grid; place-items: center; background: #000; cursor: pointer;
-      transition: opacity 1.6s ease; z-index: 2; }
-    #intro.hidden { opacity: 0; pointer-events: none; }
-    #intro .box { text-align: center; padding: 0 16px; }
-    #intro h1 { font-weight: 300; letter-spacing: 0.32em; font-size: clamp(22px, 4vw, 40px); margin: 0 0 10px; }
-    #intro p { color: var(--dim); font-size: 13px; letter-spacing: 0.08em; margin: 6px 0; }
-    #intro .enter { margin-top: 28px; display: inline-block; border: 1px solid var(--dim); padding: 10px 26px;
-      letter-spacing: 0.25em; font-size: 12px; }
-    #hud { position: fixed; left: 16px; bottom: 14px; font-size: 11px; color: var(--dim); letter-spacing: 0.06em;
-      opacity: 0; transition: opacity 2s ease 2s; pointer-events: none; z-index: 1; line-height: 1.7; }
+    button { font: inherit; color: inherit; }
+
+    /* ── Accueil ── */
+    /* l'accueil est posé SUR la salle déjà rendue (caméra fixe au point de départ), vue à travers le voile flou */
+    #intro { position: fixed; inset: 0; z-index: 6; background: transparent; overflow: hidden;
+             transition: opacity .6s ease, visibility .6s ease; }
+    #intro.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    /* voile flou : pleine page, se retire à mi-page au survol du Play (seul transform est animé) */
+    #intro::before { content: ''; position: absolute; top: 0; left: 0; width: 200vw; height: 100%; z-index: 1;
+      background: rgba(0,0,0,.55); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); pointer-events: none;
+      --feather: linear-gradient(to right, #000 0, #000 100vw, rgba(0,0,0,.93) 106.8vw, rgba(0,0,0,.72) 113.6vw,
+                 rgba(0,0,0,.43) 120.4vw, rgba(0,0,0,.17) 127.2vw, transparent 134vw);
+      -webkit-mask-image: var(--feather); mask-image: var(--feather);
+      transform: translate3d(0,0,0); will-change: transform, opacity;
+      transition: transform .9s cubic-bezier(.22,1,.36,1); }
+    body.hoverPlay #intro::before { transform: translate3d(calc(max(50vw, var(--textLeft) + var(--textColW) + 40px) - 100vw), 0, 0); }
+    /* Play : le voile continue vers la gauche et sort de l'écran ; la salle est déjà là, sans coupure */
+    body.clickedPlay #intro::before { transform: translate3d(-136vw, 0, 0); transition-duration: 1.1s; }
+    /* Play : tous les éléments de l'accueil partent vers la gauche, dans le sens du voile */
+    :is(.welcome-content, .welcome-logo, .venue, .enter, .enter-label, .credits) { translate: 0 0; }
+    body.clickedPlay :is(.welcome-content, .welcome-logo, .venue, .enter, .enter-label, .credits) {
+      translate: calc(-1 * var(--clickTextExitX)) 0; opacity: 0; pointer-events: none;
+      transition: translate .9s cubic-bezier(.22,1,.36,1), opacity .55s ease; }
+
+    .welcome-content { position: absolute; left: var(--textLeft); top: 50%; transform: translateY(-50%);
+      width: var(--textColW); max-width: 540px; max-height: calc(100dvh - 120px); overflow-y: auto; scrollbar-width: none;
+      z-index: 2; transition: transform .65s cubic-bezier(.22,1,.36,1), opacity var(--clickFadeMs) ease; }
+    .welcome-content::-webkit-scrollbar { display: none; }
+    .welcome-project-name { font-size: clamp(44px, 8vw, 64px); font-weight: 500; letter-spacing: 6px; line-height: 1;
+      display: block; margin-bottom: 6px; text-transform: uppercase; }   /* même typographie que le sous-titre */
+    .welcome-title { font-size: clamp(19px, 3.4vw, 24px); font-weight: 500; letter-spacing: 1.5px; margin: 0 0 28px;
+      line-height: 1.15; text-transform: uppercase; }
+    .welcome-text { font-size: clamp(16.5px, 3.8vw, 17.5px); font-weight: 400; color: rgba(255,255,255,.94);
+      line-height: 1.7; margin: 0 0 14px; letter-spacing: .2px; }
+    .welcome-note { font-size: 13px; font-weight: 300; line-height: 1.55; color: rgba(255,255,255,.7); margin: 6px 0 0; }
+    .welcome-note-name { font-weight: 500; color: rgba(255,255,255,.9); }
+    .welcome-context { font-family: var(--mono); font-size: 11px; font-weight: 300; color: rgba(255,255,255,.48);
+      line-height: 1.6; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08); letter-spacing: .3px; }
+
+    /* écran de chargement : le poulpe, EN PREMIER (dès l'ouverture), puis l'accueil sur la salle chargée */
+    #chargement { position: fixed; inset: 0; z-index: 20; background: #000; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px; transition: opacity .8s ease, visibility .8s; }
+    #chargement.fini { opacity: 0; visibility: hidden; pointer-events: none; transition: none; }
+    /* départ : le noir s'efface sur l'accueil, le texte part, le poulpe glisse jusqu'à sa place de logo */
+    #chargement { transition: background-color 1s ease .15s; }
+    #chargement.depart { background-color: transparent; pointer-events: none; }
+    #chargement span { transition: opacity .4s ease; }
+    #chargement.depart span { opacity: 0; }
+    #chargement:not(.fini) ~ .welcome-logo { opacity: 0; transition: none; }   /* le logo d'accueil attend le poulpe */
+    /* texte, bandeau et bouton : cachés pendant le trajet du poulpe, puis apparaissent en fondu une fois le logo en place */
+    #chargement:not(.fini) ~ #intro :is(.welcome-content, .venue, .enter, .enter-label, .credits) { opacity: 0; transition: none; pointer-events: none; }
+    #chargement.fini ~ #intro :is(.welcome-content, .venue, .enter, .enter-label, .credits) { animation: apparait .9s ease .1s backwards; }
+    /* crédits : musique et images, dans l'angle en bas à droite de l'écran de pause (Échap), plus sur l'accueil */
+    #pause .credits { opacity: 1; translate: 0 0; animation: none; }
+    #pause .credits, #pause .credits span { text-align: right; font-size: 11px; font-weight: 400; letter-spacing: .3px; color: rgba(255,255,255,.5); }
+    .credits { position: absolute; right: 16px; bottom: 14px; z-index: 3; text-align: right; font-size: 11px; line-height: 1.5;
+      color: rgba(255,255,255,.5); letter-spacing: .3px; pointer-events: none; }
+    .credits span, #pause .credits span { display: block; }
+    @media (max-width: 768px) { .credits, #pause .credits, #pause .credits span { font-size: 10px; right: 12px; bottom: 34px; max-width: 60vw; } }
+    @keyframes apparait { from { opacity: 0; } }
+    /* le poulpe du chargement est posé directement sur la page (mode « écran » : son noir disparaît sur tout ce qui est dessous) */
+    #poulpe-charge { position: fixed; z-index: 21; left: 50%; top: 50%; width: var(--logoSize); height: var(--logoSize);
+      transform: translate(-50%, -60%); object-fit: contain; mix-blend-mode: screen; pointer-events: none;
+      filter: contrast(1.12) brightness(1.08); will-change: transform; }
+    #poulpe-charge.fini { display: none; }
+    #chargement span { margin-top: calc(var(--logoSize) * 0.8 + 18px); }
+    #chargement span { font-family: var(--mono); font-size: 15px; font-weight: 400; letter-spacing: 1.2px;
+      text-transform: uppercase; color: rgba(255,255,255,.85); }
+    #chargement .points { font-weight: inherit; }
+    #chargement .points i { font-style: normal; animation: point 1.4s ease-in-out infinite; opacity: .15; }
+    #chargement .points i:nth-child(2) { animation-delay: .2s; }
+    #chargement .points i:nth-child(3) { animation-delay: .4s; }
+    @keyframes point { 0%, 60%, 100% { opacity: .15; } 30% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { #chargement .points i { animation: none; opacity: 1; } }
+    /* poulpe : logo, puis icône de chargement (le noir de la vidéo disparaît en « écran ») */
+    /* hors de #intro : son mode « écran » se fond sur la salle (dans #intro, le noir de la vidéo restait un carré noir) */
+    .welcome-logo { position: fixed; z-index: 7; width: var(--logoSize); height: var(--logoSize);
+      left: calc(var(--textLeft) / 2 - var(--logoSize) / 2); top: calc(50% - var(--logoSize) / 2);
+      mix-blend-mode: screen; pointer-events: none;
+      transition: left .65s cubic-bezier(.22,1,.36,1), top var(--logoMoveMs) cubic-bezier(.22,1,.36,1), opacity .5s ease; }
+    .welcome-logo video { width: 100%; height: 100%; object-fit: contain; filter: contrast(1.12) brightness(1.08); }
+    @media (max-width: 768px) { .welcome-logo { left: var(--textLeft); top: clamp(24px, 6vh, 60px); } }
+
+    /* bouton Play d'origine (anneau qui tourne + flèche), inactif tant que la salle charge */
+    .enter { position: absolute; right: var(--playRight); bottom: var(--playBottom); z-index: 3; width: 160px; height: 161px;
+      padding: 0; border: 0; border-radius: 50%; cursor: pointer; background: #1c97fd;   /* bleu officiel du Musée océanographique (musee.oceano.org) */
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      transition: opacity var(--clickFadeMs) ease, transform .4s ease, scale .7s cubic-bezier(.23,1,.32,1); -webkit-tap-highlight-color: transparent; }
+    .enter img { position: absolute; display: block; pointer-events: none; }
+    .enter .rond { inset: 0; width: 160px; height: 161px; animation: rond 6s linear infinite;
+      transition: transform .7s cubic-bezier(.23,1,.32,1); }
+    .enter .fleche { width: 53px; height: 70px; left: 50%; top: 50%; transform: translate(-50%,-50%) translateX(4px);
+      transition: transform .7s cubic-bezier(.23,1,.32,1), opacity .4s ease; }
+    /* survol : TOUT le bouton grossit (disque bleu + anneau ensemble), pour garder le reflet bleu clair qui tourne sur les bords */
+    body.hoverPlay .enter { scale: 1.1; }
+    body.hoverPlay .enter .fleche { transform: translate(-50%,-50%) translateX(4px) scale(1.12); }
+    .enter:disabled { cursor: progress; }
+    .enter:disabled .fleche { opacity: .25; }
+    .enter:focus-visible { outline: 1px solid var(--blue-b); outline-offset: 6px; }
+    @keyframes rond { to { transform: rotate(360deg); } }
+    @keyframes rondHover { from { transform: rotate(0) scale(1.1); } to { transform: rotate(360deg) scale(1.1); } }
+    @media (max-width: 768px) { .enter { transform: scale(.7); transform-origin: bottom right; } }
+    @media (prefers-reduced-motion: reduce) { .enter .rond { animation: none; } }
+
+
+    /* ── Accueil « exposition » : bandeau du lieu, chapeau, cartel ── */
+    .venue { position: absolute; bottom: 0; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; text-align: center; gap: 16px;   /* centré en BAS de l'accueil */
+      padding: 0 300px 22px;   /* place pour les crédits dans l'angle */ font-family: var(--mono); font-size: 15px; font-weight: 400;
+      letter-spacing: 1.4px; text-transform: uppercase; color: rgba(255,255,255,.85);
+      transition: opacity var(--clickFadeMs) ease; }
+    .overline { display: block; font-family: var(--mono); font-size: 10.5px; font-weight: 300; letter-spacing: 2px;
+      text-transform: uppercase; color: rgba(255,255,255,.55); margin-bottom: 14px; }
+    .lead { font-size: clamp(18px, 4.2vw, 20px); font-weight: 400; line-height: 1.5; margin: 0 0 18px; color: #fff; }
+    .cartel { display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px; margin: 22px 0 0; padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,.12); font-size: 16px; line-height: 1.5; }
+    .cartel dt { font-family: var(--mono); font-weight: 500; font-size: 14px; letter-spacing: 1px; text-transform: uppercase;
+      color: rgba(255,255,255,.78); padding-top: 1px; }
+    .cartel dd { margin: 0; font-weight: 400; color: rgba(255,255,255,.95); }
+    .enter-label { position: absolute; z-index: 3; right: var(--playRight); bottom: calc(var(--playBottom) - 30px); width: 160px;
+      text-align: center; font-family: var(--mono); font-size: 15px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase;
+      color: rgba(255,255,255,.92); pointer-events: none; transition: opacity var(--clickFadeMs) ease; }
+    .enter-label .ready { display: none; }
+    .enter:not(:disabled) + .enter-label .wait { display: none; }
+    .enter:not(:disabled) + .enter-label .ready { display: inline; }
+    @media (max-width: 768px) {
+      .venue { padding: 0 20px 14px; font-size: 12px; letter-spacing: 1px; }
+      .venue-r { display: none; }
+      .welcome-content { top: calc(clamp(24px, 6vh, 60px) + var(--logoSize) + 16px); transform: none;
+        max-height: calc(100dvh - clamp(24px, 6vh, 60px) - var(--logoSize) - 16px - 150px); }
+      .welcome-logo { top: calc(clamp(24px, 6vh, 60px) + 14px); }
+      .cartel { grid-template-columns: 1fr; gap: 2px; }
+      .cartel dd { margin-bottom: 8px; }
+      .enter-label { width: 112px; bottom: calc(var(--playBottom) - 26px); }
+    }
+
+    /* ── Dans la salle ── */
+    .howto { display: flex; flex-direction: column; gap: 8px; }
+    /* consignes : même blanc et même rond que le bouton du son */
+    .howto span { display: inline-flex; align-items: center; gap: 10px; font-size: 16px; color: rgba(255,255,255,.95); font-weight: 400; }
+    .howto img, .howto .touche { width: 38px; height: 38px; padding: 5px; border-radius: 50%; background: rgba(255,255,255,.06);
+                 border: 1px solid var(--line); box-sizing: border-box; flex: none; }
+    .howto img, .howto .touche { filter: brightness(1.6); }
+    /* même gris de rond et de bord pour Esc que pour les autres icônes.
+       Le rond des icônes est dessiné À PART (avant : border-radius sur l'image, qui rognait aussi le dessin :
+       coins des touches fléchées du bas coupés en arrondi) ; l'image garde sa taille, sans être coupée */
+    .howto span { position: relative; }
+    .howto img { border-radius: 0; border-color: transparent; background: none; }
+    .howto span:has(> img)::before { content: ''; position: absolute; left: 0; top: 50%; width: 38px; height: 38px; margin-top: -19px;
+      border-radius: 50%; background: rgba(255,255,255,.06); border: 1px solid var(--line); box-sizing: border-box; filter: brightness(1.6); pointer-events: none; }
+    .howto .touche { display: grid; place-items: center; padding: 0; font-size: 10.5px; font-weight: 300; letter-spacing: .5px; color: #fff; }   /* graisse fine, comme le trait des autres icônes */
+    #hud { position: fixed; left: 16px; bottom: 16px; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 1.4s ease; }
     #hud.visible { opacity: 1; }
+    #hud.quiet { opacity: .5; transition: opacity 3s ease; }
+    body.enPause #hud { opacity: 1; z-index: 3; transition: opacity .3s ease; }   /* en pause : consignes nettes, au-dessus du flou */
+    .touch-only { display: none !important; }
+    body.touch .touch-only { display: inline-flex !important; }
+    body.touch .desk-only { display: none !important; }
+    #home { position: fixed; top: 16px; left: 16px; z-index: 3; width: 44px; height: 44px; border-radius: 50%; box-sizing: border-box;
+            background: rgba(255,255,255,.06); border: 1px solid var(--line); display: grid; place-items: center;
+            opacity: 0; pointer-events: none; transition: opacity .3s ease, background .15s, border-color .15s, transform .1s; }
+    body.enPause #home { opacity: 1; pointer-events: auto; }   /* retour à l'accueil et son : seulement en pause (Échap) */
+    #home:hover { background: var(--blue); border-color: var(--blue-b); transform: scale(1.05); }
+    #home img { width: 26px; height: 26px; object-fit: contain; }
+    .notice { margin-top: 18px; }
+    #son { position: fixed; top: 16px; right: 16px; z-index: 3; width: 44px; height: 44px; padding: 0; border-radius: 50%; justify-content: center;
+           display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,.06);
+           border: 1px solid var(--line); font-family: var(--mono); font-size: 15px; font-weight: 500; letter-spacing: 1.2px;
+           text-transform: uppercase; color: rgba(255,255,255,.95); opacity: 0; pointer-events: none;
+           transition: opacity 1.4s ease, background .15s, border-color .15s; }
+    body.enPause #son { opacity: 1; pointer-events: auto; transition: opacity .3s ease; }
+    #son:hover { background: var(--blue); border-color: var(--blue-b); }
+    #son:focus-visible { outline: 1px solid var(--blue-b); outline-offset: 3px; }
+    #son svg { width: 22px; height: 22px; }
+    #son .coupe { display: none; }
+    #son[aria-pressed="false"] .ondes { display: none; }
+    #son[aria-pressed="false"] .coupe { display: inline; }
+    /* pause (Échap) : la salle passe en arrière-plan, floue et assombrie ; un clic y retourne */
+    #pause { position: fixed; inset: 0; z-index: 2; display: grid; place-items: center; cursor: pointer;
+             background: rgba(0,0,0,.45); backdrop-filter: blur(14px) saturate(.7); -webkit-backdrop-filter: blur(14px) saturate(.7);
+             opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility .45s ease; }
+    #pause.visible { opacity: 1; visibility: visible; }
+    #pause div { text-align: center; font-family: var(--mono); letter-spacing: 1.2px; }
+    #pause b { display: block; font-size: 26px; font-weight: 500; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 14px; }
+    #pause span { font-size: 18px; font-weight: 300; color: rgba(255,255,255,.7); }
   </style>
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-      "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.4.0/spark.module.js"
+      "three": "./lib/three/three.module.js",
+      "three/addons/": "./lib/three/addons/",
+      "@sparkjsdev/spark": "./lib/spark/spark.module.js"
     }
   }
   </script>
 </head>
 <body>
   <div id="app"></div>
+  <div id="pause" role="button" tabindex="-1" aria-hidden="true"><div><b>Visite en pause</b><span>Cliquer pour reprendre</span></div>
+    <div class="credits"><span>Musique : Teimo (Schluss), Thomas Köner</span><span>Images : archives du Schmidt Ocean Institute</span></div></div>
+  <button id="son" type="button" aria-pressed="true" title="Couper ou remettre le son (M)" aria-label="Couper le son"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="ondes" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="coupe" d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  <a id="home" href="../" title="Accueil"><img src="../img/presences_rares_logo_lisse_256.png" alt=""></a>
+
+  <video id="poulpe-charge" autoplay loop muted playsinline preload="auto">
+    <source src="../videos/poulpe_icone_chargement_leger.mp4" type="video/mp4"></video>
+  <div id="chargement" role="status"><span>Préparation de la salle<b class="points" aria-hidden="true"><i>.</i><i>.</i><i>.</i></b></span></div>
+
+  <div class="welcome-logo"><video id="poulpe" muted playsinline preload="auto">
+    <source src="../videos/poulpe_icone_chargement_leger.mp4" type="video/mp4"></video></div>
   <div id="intro">
-    <div class="box">
-      <h1>PRÉSENCES RARES</h1>
-      <p>Une exposition qui n'existe qu'ici.</p>
-      <p>Prototype de la salle</p>
-      <span class="enter">ENTRER</span>
+
+    <header class="venue">
+      <span>Proposition pour le Musée océanographique de Monaco</span>
+    </header>
+
+    <div class="welcome-content panel">
+      <span class="welcome-project-name">DUMBO</span>
+      <h1 class="welcome-title">Présences abyssales rares</h1>
+      <p class="lead">Une salle posée au fond des abysses. Ses parois deviennent des hublots ouverts sur un monde que personne ne peut voir de ses yeux.</p>
+      <p class="welcome-text">À grande profondeur, la lumière ne pénètre plus. Ce qui reste, c'est une luminance résiduelle, diffuse, portée par l'eau elle-même. Les organismes qui y vivent n'ont jamais été conçus pour être vus.</p>
+      <p class="welcome-text">Aucune de ces espèces ne vit en aquarium. Rares, parfois filmées une seule fois, elles surgissent de l'obscurité, s'approchent, puis y retournent. Pas de reconstitution. Pas de fiction.</p>
+      <dl class="cartel">
+        <dt>Lieu</dt><dd>Salle d'exposition, Musée océanographique de Monaco</dd>
+        <dt>Images</dt><dd>Captations scientifiques réelles, archives du Schmidt Ocean Institute (ROV SuBastian)</dd>
+        <dt>Conception</dt><dd>Johann Arata</dd>
+      </dl>
     </div>
+
+    <button class="enter" type="button" aria-label="Entrer dans la salle">
+      <img class="rond" src="../img/icone_play_rond.png" alt="">
+      <img class="fleche" src="../img/icone_play_fleche.png" alt="">
+    </button>
+    <div class="enter-label" aria-hidden="true"><span class="wait"></span><span class="ready"></span></div>
   </div>
-  <div id="hud">ZQSD / flèches : marcher · souris : regarder · Maj : ralentir</div>
+
+  <div id="hud"><div class="howto">
+    <span class="desk-only"><img src="../img/icone-souris.svg" alt="">Glisser : regarder</span>
+    <span class="desk-only"><img src="../img/icone-fleches.svg" alt="">ZQSD / flèches : marcher</span>
+    <span class="desk-only"><img src="../img/icone-scroll.svg" alt="">Molette : avancer</span>
+    <span class="desk-only"><b class="touche" aria-hidden="true">Esc</b>Esc ou double-clic : pause et réglages</span>
+    <span class="touch-only">Glisser à gauche : marcher · à droite : regarder</span>
+  </div></div>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

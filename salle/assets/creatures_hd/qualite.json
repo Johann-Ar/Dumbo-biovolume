@@ -1,0 +1,452 @@
+{
+ "anemone_blanche": {
+  "px": 960,
+  "utile": 960,
+  "nettete": 0.861
+ },
+ "araignee_mer": {
+  "px": 924,
+  "utile": 924,
+  "nettete": 1.405
+ },
+ "calmar_ailes": {
+  "px": 676,
+  "utile": 676,
+  "nettete": 0.929
+ },
+ "calmar_beige": {
+  "px": 1080,
+  "utile": 1080,
+  "nettete": 0.419
+ },
+ "calmar_bras": {
+  "px": 560,
+  "utile": 560,
+  "nettete": 1.444
+ },
+ "calmar_colossal": {
+  "px": 1054,
+  "utile": 1054,
+  "nettete": 0.792
+ },
+ "calmar_cyan": {
+  "px": 708,
+  "utile": 708,
+  "nettete": 0.779
+ },
+ "calmar_geant_pale": {
+  "px": 844,
+  "utile": 844,
+  "nettete": 0.85
+ },
+ "calmar_lance": {
+  "px": 1118,
+  "utile": 1118,
+  "nettete": 0.721
+ },
+ "calmar_rouge": {
+  "px": 886,
+  "utile": 886,
+  "nettete": 0.723
+ },
+ "calmar_rouge_nageur": {
+  "px": 516,
+  "utile": 516,
+  "nettete": 2.266
+ },
+ "calmar_sombre": {
+  "px": 930,
+  "utile": 930,
+  "nettete": 1.04
+ },
+ "calmar_transparent": {
+  "px": 540,
+  "utile": 540,
+  "nettete": 1.013
+ },
+ "calmar_verre": {
+  "px": 802,
+  "utile": 802,
+  "nettete": 0.871
+ },
+ "calmar_verre_orange": {
+  "px": 604,
+  "utile": 604,
+  "nettete": 1.723
+ },
+ "calmar_violet": {
+  "px": 1600,
+  "utile": 1600,
+  "nettete": 0.789
+ },
+ "chabot_bleu": {
+  "px": 976,
+  "utile": 976,
+  "nettete": 1.146
+ },
+ "chimere_face": {
+  "px": 568,
+  "utile": 568,
+  "nettete": 0.744
+ },
+ "cirrate_blanc": {
+  "px": 728,
+  "utile": 728,
+  "nettete": 0.616
+ },
+ "cirrate_brun": {
+  "px": 486,
+  "utile": 486,
+  "nettete": 0.815
+ },
+ "cirrate_ombrelle": {
+  "px": 806,
+  "utile": 806,
+  "nettete": 0.76
+ },
+ "cirrate_rouge": {
+  "px": 846,
+  "utile": 846,
+  "nettete": 0.951
+ },
+ "concombre_nageur": {
+  "px": 970,
+  "utile": 970,
+  "nettete": 0.396
+ },
+ "crevette_fil": {
+  "px": 400,
+  "utile": 400,
+  "nettete": 2.739
+ },
+ "ctenophore": {
+  "px": 452,
+  "utile": 452,
+  "nettete": 0.525
+ },
+ "ctenophore_irise": {
+  "px": 986,
+  "utile": 986,
+  "nettete": 1.744
+ },
+ "cydippe_bleue": {
+  "px": 694,
+  "utile": 694,
+  "nettete": 0.614
+ },
+ "dumbo": {
+  "px": 826,
+  "utile": 826,
+  "nettete": 0.353
+ },
+ "dumbo_blanc": {
+  "px": 1508,
+  "utile": 1508,
+  "nettete": 0.254
+ },
+ "larvacien_geant": {
+  "px": 478,
+  "utile": 478,
+  "nettete": 0.439
+ },
+ "meduse_ambre": {
+  "px": 926,
+  "utile": 926,
+  "nettete": 0.411
+ },
+ "meduse_bleue": {
+  "px": 864,
+  "utile": 864,
+  "nettete": 1.954
+ },
+ "meduse_conique": {
+  "px": 1492,
+  "utile": 1492,
+  "nettete": 0.809
+ },
+ "meduse_couronne": {
+  "px": 650,
+  "utile": 650,
+  "nettete": 2.078
+ },
+ "meduse_criniere": {
+  "px": 754,
+  "utile": 754,
+  "nettete": 1.274
+ },
+ "meduse_cube": {
+  "px": 1016,
+  "utile": 1016,
+  "nettete": 1.155
+ },
+ "meduse_filaments": {
+  "px": 876,
+  "utile": 876,
+  "nettete": 0.923
+ },
+ "meduse_geante_violette": {
+  "px": 1076,
+  "utile": 1076,
+  "nettete": 0.371
+ },
+ "meduse_globe_rouge": {
+  "px": 736,
+  "utile": 736,
+  "nettete": 1.28
+ },
+ "meduse_lilas": {
+  "px": 876,
+  "utile": 876,
+  "nettete": 1.15
+ },
+ "meduse_lune": {
+  "px": 640,
+  "utile": 640,
+  "nettete": 0.757
+ },
+ "meduse_noire": {
+  "px": 956,
+  "utile": 956,
+  "nettete": 1.57
+ },
+ "meduse_ombrelle_lilas": {
+  "px": 828,
+  "utile": 828,
+  "nettete": 1.122
+ },
+ "meduse_pourpre": {
+  "px": 724,
+  "utile": 724,
+  "nettete": 0.703
+ },
+ "meduse_rose": {
+  "px": 884,
+  "utile": 884,
+  "nettete": 0.962
+ },
+ "meduse_rouge": {
+  "px": 1016,
+  "utile": 1016,
+  "nettete": 0.858
+ },
+ "meduse_rouge_ronde": {
+  "px": 712,
+  "utile": 712,
+  "nettete": 0.65
+ },
+ "meduse_tentacules_jaunes": {
+  "px": 688,
+  "utile": 688,
+  "nettete": 0.504
+ },
+ "meduse_traine": {
+  "px": 886,
+  "utile": 886,
+  "nettete": 0.595
+ },
+ "meduse_traine_b": {
+  "px": 730,
+  "utile": 730,
+  "nettete": 0.512
+ },
+ "meduse_trompe": {
+  "px": 748,
+  "utile": 748,
+  "nettete": 0.856
+ },
+ "nouvelle_01": {
+  "px": 792,
+  "utile": 792,
+  "nettete": 1.777
+ },
+ "nouvelle_02": {
+  "px": 520,
+  "utile": 520,
+  "nettete": 0.57
+ },
+ "nouvelle_03": {
+  "px": 750,
+  "utile": 750,
+  "nettete": 0.68
+ },
+ "nouvelle_04": {
+  "px": 824,
+  "utile": 824,
+  "nettete": 0.762
+ },
+ "nouvelle_05": {
+  "px": 818,
+  "utile": 818,
+  "nettete": 0.816
+ },
+ "nouvelle_06": {
+  "px": 926,
+  "utile": 926,
+  "nettete": 1.519
+ },
+ "nouvelle_07": {
+  "px": 300,
+  "utile": 300,
+  "nettete": 1.856
+ },
+ "nouvelle_08": {
+  "px": 440,
+  "utile": 440,
+  "nettete": 0.943
+ },
+ "nouvelle_09": {
+  "px": 272,
+  "utile": 272,
+  "nettete": 1.647
+ },
+ "nouvelle_10": {
+  "px": 726,
+  "utile": 726,
+  "nettete": 0.746
+ },
+ "nouvelle_11": {
+  "px": 812,
+  "utile": 812,
+  "nettete": 1.28
+ },
+ "nouvelle_12": {
+  "px": 482,
+  "utile": 482,
+  "nettete": 0.923
+ },
+ "nouvelle_13": {
+  "px": 472,
+  "utile": 472,
+  "nettete": 1.177
+ },
+ "nouvelle_14": {
+  "px": 768,
+  "utile": 768,
+  "nettete": 0.722
+ },
+ "nouvelle_15": {
+  "px": 734,
+  "utile": 734,
+  "nettete": 1.213
+ },
+ "nouvelle_16": {
+  "px": 782,
+  "utile": 782,
+  "nettete": 0.713
+ },
+ "pieuvre_rouge": {
+  "px": 784,
+  "utile": 784,
+  "nettete": 1.425
+ },
+ "pieuvre_tachetee": {
+  "px": 956,
+  "utile": 956,
+  "nettete": 1.57
+ },
+ "pieuvre_verre": {
+  "px": 1182,
+  "utile": 1182,
+  "nettete": 1.081
+ },
+ "poisson_beige": {
+  "px": 1034,
+  "utile": 1034,
+  "nettete": 0.361
+ },
+ "poisson_blanc": {
+  "px": 496,
+  "utile": 496,
+  "nettete": 0.428
+ },
+ "poisson_lance": {
+  "px": 484,
+  "utile": 484,
+  "nettete": 0.976
+ },
+ "poisson_noir": {
+  "px": 1210,
+  "utile": 1210,
+  "nettete": 0.568
+ },
+ "poisson_noir_tache": {
+  "px": 696,
+  "utile": 696,
+  "nettete": 0.477
+ },
+ "poisson_rose_bossu": {
+  "px": 1396,
+  "utile": 1396,
+  "nettete": 0.68
+ },
+ "poisson_rose_long": {
+  "px": 1308,
+  "utile": 1308,
+  "nettete": 2.369
+ },
+ "raie_profonde": {
+  "px": 1054,
+  "utile": 1054,
+  "nettete": 1.505
+ },
+ "requin_gris": {
+  "px": 638,
+  "utile": 638,
+  "nettete": 0.594
+ },
+ "requin_gris_b": {
+  "px": 646,
+  "utile": 646,
+  "nettete": 0.729
+ },
+ "requin_lutin": {
+  "px": 438,
+  "utile": 438,
+  "nettete": 0.585
+ },
+ "requin_sixbranchies": {
+  "px": 764,
+  "utile": 764,
+  "nettete": 0.578
+ },
+ "ruban_lumineux": {
+  "px": 576,
+  "utile": 576,
+  "nettete": 2.14
+ },
+ "salpe_bleue": {
+  "px": 806,
+  "utile": 806,
+  "nettete": 3.632
+ },
+ "salpe_rouge": {
+  "px": 1552,
+  "utile": 1552,
+  "nettete": 0.379
+ },
+ "siphonophore_bleu": {
+  "px": 790,
+  "utile": 790,
+  "nettete": 3.188
+ },
+ "siphonophore_epineux": {
+  "px": 896,
+  "utile": 896,
+  "nettete": 1.55
+ },
+ "siphonophore_noir": {
+  "px": 1070,
+  "utile": 1070,
+  "nettete": 1.777
+ },
+ "siphonophore_orange": {
+  "px": 532,
+  "utile": 532,
+  "nettete": 1.682
+ },
+ "ver_spirale": {
+  "px": 1036,
+  "utile": 1036,
+  "nettete": 1.66
+ }
+}

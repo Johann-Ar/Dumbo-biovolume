@@ -4,7 +4,9 @@ import * as THREE from 'three';
 // (chaque vitre lit sa tranche via des uniforms : un seul envoi au GPU par image).
 export function makeVideo(src) {
   const video = document.createElement('video');
-  video.src = src;
+  // Deux formats : WebM VP9 (Chrome, Firefox, Edge) ou MP4 (Safari, iPhone) selon ce que lit le navigateur.
+  const webm = video.canPlayType('video/webm; codecs="vp9"');
+  video.src = src.endsWith('.webm') && !webm ? src.replace(/\.webm$/, '.mp4') : src;
   video.crossOrigin = 'anonymous';
   video.muted = true;
   video.loop = true;

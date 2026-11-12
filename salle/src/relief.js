@@ -25,14 +25,16 @@ export function reliefMaterial(tex, { u0, u1, v1, depth = 2.0, colorFrac = 2 / 3
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
       }`,
     fragmentShader: /* glsl */`
-      uniform sampler2D map; varying vec2 vC; varying float vBack;
+      uniform sampler2D map; uniform float uDepth; varying vec2 vC; varying float vBack;
       vec3 toLinear(vec3 c){ return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
       void main(){
         vec3 c = toLinear(texture2D(map, vC).rgb);
         c = max(c - 0.02, 0.0) / 0.98;
+        c *= mix(1.0, 0.18, clamp(vBack / uDepth, 0.0, 1.0));   // l'eau : plus c'est loin derrière la vitre, plus c'est sombre
         // bords de silhouette : là où le relief plonge brutalement, on éteint la « toile » étirée
         float slope = fwidth(vBack) / max(fwidth(vC.x) * 400.0, 1e-4);
-        c *= 1.0 - smoothstep(0.15, 0.6, slope);
+        if (slope > 0.45) discard;                       // « toile » étirée entre une créature et le fond : supprimée (plus de faisceaux)
+        c *= 1.0 - smoothstep(0.15, 0.45, slope);
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -45,5 +47,12 @@ export function reliefScreen(scene, { w, h, position, rotationY = 0, tex, segX =
   mesh.rotation.y = rotationY;
   mesh.frustumCulled = false; // les sommets sont déplacés dans le shader
   scene.add(mesh);
+  // Écran opaque : un caisson noir ferme l'arrière. On ne voit jamais à travers l'écran (ni plafond, ni hall) :
+  // seulement le noir de l'écran et, dedans, les créatures en volume.
+  const d = (opts.depth ?? 2.0) + 0.3;
+  const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }));
+  box.position.set(0, 0, -d / 2).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY).add(position);
+  box.rotation.y = rotationY;
+  scene.add(box);
   return mesh;
 }

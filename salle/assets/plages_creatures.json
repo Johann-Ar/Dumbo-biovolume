@@ -1,0 +1,175 @@
+{
+ "_note": "Plage d'images bonnes de chaque vidéo [première, première mauvaise) relevée à l'œil dans tableau_creatures.html ; null = désactivée ; absente = toute la vidéo.",
+ "calmar_beige": [
+  126,
+  242
+ ],
+ "calmar_colossal": [
+  0,
+  155
+ ],
+ "calmar_cyan": null,
+ "calmar_geant_pale": [
+  0,
+  277
+ ],
+ "calmar_lance": null,
+ "calmar_rouge_nageur": [
+  0,
+  205
+ ],
+ "calmar_transparent": [
+  0,
+  65
+ ],
+ "calmar_verre": [
+  0,
+  58
+ ],
+ "calmar_violet": [
+  0,
+  75
+ ],
+ "chabot_bleu": [
+  0,
+  243
+ ],
+ "chimere_face": [
+  0,
+  76
+ ],
+ "cirrate_blanc": [
+  0,
+  86
+ ],
+ "cirrate_brun": [
+  19,
+  211
+ ],
+ "cirrate_ombrelle": [
+  0,
+  71
+ ],
+ "cirrate_rouge": [
+  0,
+  72
+ ],
+ "ctenophore": [
+  0,
+  64
+ ],
+ "dumbo": [
+  0,
+  194
+ ],
+ "dumbo_blanc": [
+  0,
+  69
+ ],
+ "larvacien_geant": [
+  0,
+  254
+ ],
+ "meduse_ambre": [
+  0,
+  206
+ ],
+ "meduse_conique": [
+  0,
+  127
+ ],
+ "meduse_couronne": null,
+ "meduse_criniere": [
+  0,
+  286
+ ],
+ "meduse_globe_rouge": [
+  0,
+  226
+ ],
+ "meduse_pourpre": [
+  0,
+  143
+ ],
+ "meduse_rouge": [
+  0,
+  73
+ ],
+ "nouvelle_01": [
+  0,
+  76
+ ],
+ "nouvelle_02": [
+  0,
+  80
+ ],
+ "nouvelle_03": [
+  6,
+  75
+ ],
+ "nouvelle_04": [
+  0,
+  69
+ ],
+ "nouvelle_06": [
+  0,
+  115
+ ],
+ "nouvelle_07": null,
+ "nouvelle_08": [
+  0,
+  59
+ ],
+ "nouvelle_09": [
+  0,
+  77
+ ],
+ "nouvelle_10": [
+  0,
+  135
+ ],
+ "nouvelle_11": null,
+ "nouvelle_12": null,
+ "nouvelle_15": null,
+ "nouvelle_16": null,
+ "pieuvre_verre": [
+  0,
+  179
+ ],
+ "poisson_noir": [
+  0,
+  129
+ ],
+ "poulpe": [
+  0,
+  67
+ ],
+ "raie_profonde": [
+  0,
+  76
+ ],
+ "requin_gris": [
+  0,
+  65
+ ],
+ "requin_gris_b": [
+  0,
+  235
+ ],
+ "requin_sixbranchies": [
+  0,
+  285
+ ],
+ "ruban_lumineux": [
+  0,
+  236
+ ],
+ "salpe_rouge": [
+  0,
+  64
+ ],
+ "siphonophore_bleu": [
+  0,
+  57
+ ]
+}
