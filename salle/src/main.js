@@ -304,6 +304,8 @@ async function prepare() {
   for (let i = 0; i < toutes.length; i += 3) {
     await Promise.all(toutes.slice(i, i + 3).map((v) => { v.muted = true; return v.play().then(() => pretes(v), () => {}).then(() => { if (animaux.has(v)) v.pause(); }); }));
   }
+  await visitors?.pret;   // toutes les photos de visiteurs : aucun visiteur ne s'affiche en retard dans la salle
+  await creatures?.premieres;   // les premières vidéos de créatures sont prêtes : elles arrivent tout de suite, entières
   await renderer.compileAsync(scene, camera);
   for (let i = 0; i < 6; i++) await nextFrame();   // les vidéos remplissent leurs textures
   captureEnv();

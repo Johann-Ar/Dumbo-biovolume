@@ -41,9 +41,11 @@ while True:
         rgba = np.dstack([img[Y0:Y1, X0:X1], (al * 255).astype(np.uint8)])
         s = 512 / rgba.shape[0]
         rgba = cv2.resize(rgba, (max(2, int(rgba.shape[1] * s)), 512), interpolation=cv2.INTER_AREA)
-        cv2.imwrite(os.path.join(a.out, f'v_{n:04d}.png'), rgba); n += 1
+        cv2.imwrite(os.path.join(a.out, f'v_{n:04d}.png'), rgba)
+        # la salle lit le WebP (10 fois plus léger, toutes les photos sont chargées pendant l'accueil)
+        cv2.imwrite(os.path.join(a.out, f'v_{n:04d}.webp'), rgba, [cv2.IMWRITE_WEBP_QUALITY, 82]); n += 1
     prec = cur
     if i % 40 == 0: print(f'{i} images lues, {n} visiteurs', flush=True)
 p.wait()
-json.dump({'n': n}, open(os.path.join(a.out, 'pool.json'), 'w'))
+json.dump({'n': n, 'exclues': []}, open(os.path.join(a.out, 'pool.json'), 'w'))
 print(f'OK {n} visiteurs', flush=True)

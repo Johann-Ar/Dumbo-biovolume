@@ -137,11 +137,23 @@ export async function addVisitors(scene, params, base = 'assets/visitors/') {
   // salle) : chaque pose a SA photo, jamais la même partout. Chargées seulement quand elles apparaissent.
   // Sans stock (ou ?stock=0) : les 35 anciennes images (tracks).
   const PL = 'assets/ghosts/pool/';
-  const nPool = FRAMES && params.get('stock') !== '0' ? await fetch(PL + 'pool.json').then((r) => r.ok ? r.json() : { n: 0 }, () => ({ n: 0 })).then((j) => j.n) : 0;
+  const infoPool = FRAMES && params.get('stock') !== '0' ? await fetch(PL + 'pool.json').then((r) => r.ok ? r.json() : { n: 0 }, () => ({ n: 0 })) : { n: 0 };
+  // exclues : pas de vraies silhouettes (taches, bras seul, drap, forme couchée, trop floues), vues sur la planche du 12/11
+  const horsPool = new Set(infoPool.exclues ?? []);
   const texPool = [];
-  const ordreP = Array.from({ length: nPool }, (_, i) => i);   // ordre mélangé (fixe) : deux poses voisines ont des photos éloignées dans la vidéo
+  const ordreP = Array.from({ length: infoPool.n }, (_, i) => i).filter((i) => !horsPool.has(i));   // ordre mélangé (fixe) : deux poses voisines ont des photos éloignées dans la vidéo
+  const nPool = ordreP.length;
   for (let i = nPool - 1, r = 12345; i > 0; i--) { r = (r * 1103515245 + 12345) % 2147483648; const j = r % (i + 1); [ordreP[i], ordreP[j]] = [ordreP[j], ordreP[i]]; }
-  const photo = (graine) => { const i = ordreP[graine % nPool]; if (!texPool[i]) { const x = chargeur.load(`${PL}v_${String(i).padStart(4, '0')}.png`); x.premultiplyAlpha = true; texPool[i] = x; } return texPool[i]; };
+  // TOUTES chargées dès l'ouverture, pendant la page d'accueil (WebP : 2,7 Mo au lieu de 28 Mo en PNG) : avant, chacune
+  // se chargeait quand sa pose apparaissait, et en ligne les visiteurs arrivaient en retard, vides ou mal proportionnés
+  const chargesPool = [];
+  for (const i of ordreP) {
+    chargesPool.push(new Promise((ok) => {
+      const x = chargeur.load(`${PL}v_${String(i).padStart(4, '0')}.webp`, ok, undefined, ok);   // erreur : on n'attend pas plus
+      x.premultiplyAlpha = true; texPool[i] = x;
+    }));
+  }
+  const photo = (graine) => texPool[ordreP[graine % nPool]];
   let graines = 0;
   const plan = new THREE.PlaneGeometry(1, 1);
   const TRANSP = Number(params.get('vtransp') ?? 0.38);   // opacité des visiteurs (demande, 12/11 : « blanc transparent », fondus dans la salle)
@@ -264,7 +276,9 @@ export async function addVisitors(scene, params, base = 'assets/visitors/') {
     p.m.rotation.z = Math.atan2(camera.position.x - p.w.x, camera.position.z - p.w.z) - devant;
   };
   const lisse = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
-  return function update(t, camera, e) {
+  update.pret = Promise.all(chargesPool);   // main.js l'attend avant d'ouvrir la salle
+  return update;
+  function update(t, camera, e) {
     if (e) eclair = e;
     const dt = Math.min(0.1, Math.max(0, t - (update.t ?? t))); update.t = t;
     temps.value = t;
@@ -313,5 +327,5 @@ export async function addVisitors(scene, params, base = 'assets/visitors/') {
       });
     }
     update.accueil = nAcc; update.expo = nExpo;   // visiteurs bien visibles dans l'accueil (contrôle)
-  };
+  }
 }
