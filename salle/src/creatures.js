@@ -149,7 +149,7 @@ const SOL = [
 // Peuplement : la salle s'ouvre VIDE ; le premier animal arrive après quelques secondes, puis de plus en plus vite
 // (courbe exponentielle) jusqu'à quelques animaux à la fois, jamais plus : il faut chercher, attendre, apercevoir.
 // à plein : à peu près un animal par écran des murs (9) et 3 au sol ; ?murs=… &sol=… pour régler
-const MAX_MURS = Number(new URLSearchParams(location.search).get('murs') ?? 9), MAX_SOL = Number(new URLSearchParams(location.search).get('sol') ?? 3), MONTEE = 60;     // MONTEE : secondes avant la présence maximale
+const MAX_MURS = Number(new URLSearchParams(location.search).get('murs') ?? 6), MAX_SOL = Number(new URLSearchParams(location.search).get('sol') ?? 2), MONTEE = 60;     // MONTEE : secondes avant la présence maximale
 // Étendue de chaque surface : position le long (u) et hauteur (y), en m. Sol : u = longueur, y = travers.
 const ETENDUE = { gauche: [-11, 11, 0, 8.5], droite: [-11, 11, 0, 8.5], fond: [-3.7, 3.7, 0, 8.5], sol: [-11, 11, -3.4, 3.4] };
 const DROITE_VIDEO = { gauche: -1, droite: 1, fond: 1, sol: 1 };   // sens du « vers la droite » de la vidéo, en u
@@ -282,7 +282,9 @@ export async function addCreatures(scene) {
   // qualité réelle de chaque vidéo (tools/qualite_creatures.py) : une créature floue ou peu définie est montrée
   // plus petite, pour ne jamais paraître pixelisée de près
   const qualite = HD ? await fetch('assets/creatures_hd/qualite.json', { cache: 'no-cache' }).then((r) => r.ok ? r.json() : {}, () => ({})) : {};
-  const tailleMax = (name) => { const q = qualite[name]; return q ? Math.max(2.8, Math.min(q.px / 110, q.utile / 55)) : 99; };
+  // « utile » = hauteur RÉELLEMENT définie (tools/resolution_creatures.py, 13/11 : beaucoup de sources sont agrandies) :
+  // au plus 1 m d'écran pour 60 px de vrai détail (« certaines créatures sont trop grandes pour leur résolution »)
+  const tailleMax = (name) => { const q = qualite[name]; return q ? Math.max(2.0, Math.min(q.px / 110, q.utile / 60)) : 99; };
   const charge = (name) => cache[name] ??= (async () => {
     // version haute définition si elle existe (assets/creatures_hd), sinon l'ancienne (720 px) ; ?hd=0 : toujours l'ancienne
     // no-cache : toujours la fiche à jour (sinon l'ancien format reste en cache et l'ancienne vidéo est chargée)
@@ -440,7 +442,12 @@ export async function addCreatures(scene) {
       // lecture ralentie pour couvrir le passage, et le passage raccourci si la vidéo, même ralentie, est plus courte
       // une seule lecture, très lente (jusqu'à 4 fois plus lente) ; le passage dure au moins 14 s : l'animal reste sous
       // son spot, presque immobile ; si la vidéo finit avant, il garde sa dernière bonne image en retournant dans le noir
-      const T = (it.info.images ?? 300) / 30;
+      // clips longs (plongées, 15 à 50 s) : un passage en montre au plus JEU_MAX s, pris à un endroit au hasard,
+      // toujours vers l'avant et à vitesse normale (jamais de boucle) ; d0/d1 = images de début et de fin (exclue) du passage
+      const JEU_MAX = 22 * 30, nI = it.info.images ?? 300;
+      it.d0 = (it.info.debut ?? 0) + (nI > JEU_MAX ? Math.floor(Math.random() * (nI - JEU_MAX)) : 0);
+      it.d1 = Math.min(it.info.fin ?? it.d0 + nI, it.d0 + JEU_MAX);
+      const T = (it.d1 - it.d0) / 30;
       // AUCUN ralenti (demande) : toujours lue à vitesse normale ; le passage dure au plus la vidéo
       const rate = 1;
       dur = FIXE ? T : Math.min(dur, T);   // immobile : visible exactement le temps de sa vidéo (jamais d'image figée)
@@ -449,7 +456,7 @@ export async function addCreatures(scene) {
       // au milieu du fondu, ni de l'image du passage précédent
       it.pret = false; it.video.__vue = false; it.video.preload = 'auto'; it.video.__cale = false;
       it.video.addEventListener('seeked', () => { it.video.__cale = true; }, { once: true });
-      try { it.video.currentTime = (it.info.debut ?? 0) / 30; } catch (e) {}   // départ au début de la plage bonne
+      try { it.video.currentTime = it.d0 / 30; } catch (e) {}   // départ au début du passage choisi
       it.mur = mur; it.h = h; it.t0 = t; it.lance = t; it.dur = dur; it.actif = true; it.fixe = FIXE ? path[0] : null;
       const PL = { gauche: [-1, 0, 0, ROOM.width / 2], droite: [1, 0, 0, ROOM.width / 2], fond: [0, 0, -1, ROOM.length / 2], sol: [0, -1, 0, 0] };
       it.mesh.material.uniforms.uPlan.value.set(...PL[mur]);
@@ -522,7 +529,7 @@ export async function addCreatures(scene) {
         // Mise en scène : un premier animal tout de suite, puis montée rapide jusqu'au maximum (~35 s), et on s'y tient.
         // Chaque animal ne reste que le temps de sa vidéo (souvent 3 à 8 s) : avant, le suivant arrivait 6 à 13 s plus
         // tard, il n'y en avait presque jamais plus d'un (« 3 créatures en une minute », mesuré en ligne le 12/11).
-        const cible = Math.min(max, (groupe ? [4, 12, 22] : [1.5, 4, 7, 10, 14, 18, 23, 28, 34]).filter((s) => age > s).length);
+        const cible = Math.min(max, (groupe ? [6, 20] : [2, 7, 13, 20, 28, 37]).filter((s) => age > s).length);
         const actifs = items.filter((i) => i.actif && i.sol === groupe).length;
         if (actifs < cible && t > prochain[groupe]) {
           // seulement des animaux dont la vidéo est DÉJÀ entièrement chargée (préchargées à l'avance, voir chauffe) :
@@ -539,7 +546,7 @@ export async function addCreatures(scene) {
               it.chaud = false; compte.lances++;
               if (it.c.grand && !groupe) dernierGrand = t;
               // jamais deux d'un coup ; très rapprochées tant qu'il en manque beaucoup
-              prochain[groupe] = t + (cible - actifs > 2 ? hasard(0.2, 0.45) : hasard(0.35, 0.8));   // chaque animal ne vit que 3 à 8 s : il faut en relancer souvent pour en garder plusieurs
+              prochain[groupe] = t + (cible - actifs > 2 ? hasard(1.2, 2.5) : hasard(2.5, 5));   // rythme calmé (demande du 13/11) : les clips longs restent plus longtemps
             } else { prochain[groupe] = t + 0.5; compte.echecs++; }                                // pas de place libre : on réessaie un peu plus tard
           }
         }
@@ -549,13 +556,13 @@ export async function addCreatures(scene) {
       if (!it.actif) continue;
       if (!it.pret) {   // vidéo pas encore positionnée au début de sa plage : invisible, l'horloge du passage attend
         const v = it.video;
-        if (!v.seeking && v.readyState >= 2 && (v.__cale || Math.abs(v.currentTime - (it.info.debut ?? 0) / 30) < 0.05)) { it.pret = true; it.t0 = t; v.__vue = true; }
+        if (!v.seeking && v.readyState >= 2 && (v.__cale || Math.abs(v.currentTime - it.d0 / 30) < 0.05)) { it.pret = true; it.t0 = t; v.__vue = true; }
         else { it.t0 = t; it.mesh.visible = false; if (t - it.lance > 8) { it.actif = false; it.boite = null; it.libre = t + 20; } continue; }
       }
       const u = (t - it.t0) / it.dur;
       // jamais au-delà de la plage bonne : la vidéo s'arrête sur sa dernière bonne image (le passage se termine avec elle)
-      if (it.pret && it.video.currentTime > (it.info.fin ?? 1e9) / 30 - 0.04 && !it.video.paused) it.video.pause();
-      if (u >= 1) { it.actif = false; it.boite = null; it.mesh.visible = false; it.libre = t + hasard(15, 35); it.p.set(0, 0, 3); continue; }   // repart, ne revient pas de sitôt
+      if (it.pret && it.video.currentTime > it.d1 / 30 - 0.04 && !it.video.paused) it.video.pause();
+      if (u >= 1) { it.actif = false; it.boite = null; it.mesh.visible = false; it.libre = t + hasard(25, 50); it.p.set(0, 0, 3); continue; }   // repart, ne revient pas de sitôt
       // vitesse constante le long du chemin, adoucie seulement au départ et à l'arrivée (dans le noir) :
       // getPointAt suit la longueur réelle du trajet, sans accélérations d'un tronçon à l'autre
       const e = u < 0.15 ? 0.15 * Math.pow(u / 0.15, 2) / 2 / 0.85 : u > 0.85 ? 1 - 0.15 * Math.pow((1 - u) / 0.15, 2) / 2 / 0.85 : (u - 0.075) / 0.85;
@@ -586,7 +593,7 @@ export async function addCreatures(scene) {
     // seules les vidéos des animaux visibles sont décodées (les autres en pause : la page reste fluide)
     if (debut !== null) for (const v of videos) {
       const actif = items.find((i) => i.actif && i.video === v);
-      const utile = !!actif && actif.pret && v.currentTime < (actif.info.fin ?? 1e9) / 30 - 0.04;   // fin de la plage bonne : reste en pause
+      const utile = !!actif && actif.pret && v.currentTime < actif.d1 / 30 - 0.04;   // fin de la plage bonne : reste en pause
       if (utile && v.paused) v.play().catch(() => {});
       if (utile) {
         const r = 1;   // vitesse fixée au lancement (une seule lecture)

@@ -322,11 +322,13 @@ async function finChargement() {
   if (v && logo) {
     const a = v.getBoundingClientRect(), b = logo.getBoundingClientRect();
     const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
-    v.style.transition = `transform ${duree}ms cubic-bezier(.65,0,.35,1)`;
+    v.style.transition = `transform ${duree}ms cubic-bezier(.5,0,1,1)`;   // part doucement, ARRIVE sans ralentir : il se fige d'un coup (demande, 13/11)
     v.style.transform = `translate(calc(-50% + ${dx}px), calc(-60% + ${dy}px)) scale(${b.width / a.width})`;
   }
   await new Promise((r) => setTimeout(r, duree + 30));
-  if (lv && v) { lv.pause(); try { lv.currentTime = v.currentTime; } catch {} }   // même image, puis FIGÉ à sa place d'accueil
+  // figé d'un coup sur la pose du LOGO D'ORIGINE (image 0 de l'animation = img/presences_rares_logo_lisse.png),
+  // jamais sur l'image où en était l'animation
+  if (lv) { lv.pause(); try { if (lv.currentTime !== 0) lv.currentTime = 0; } catch {} }
   if (logo) { logo.style.transition = 'none'; requestAnimationFrame(() => requestAnimationFrame(() => { logo.style.transition = ''; })); }
   chargement.classList.add('fini');   // le logo prend la place du poulpe ; textes et bouton apparaissent en fondu
   v?.classList.add('fini'); v?.pause();

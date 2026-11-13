@@ -42,14 +42,6 @@
   0,
   86
  ],
- "cirrate_brun": [
-  19,
-  211
- ],
- "cirrate_ombrelle": [
-  0,
-  71
- ],
  "cirrate_rouge": [
   0,
   72
@@ -91,10 +83,6 @@
   0,
   143
  ],
- "meduse_rouge": [
-  0,
-  73
- ],
  "nouvelle_01": [
   0,
   76
@@ -107,19 +95,11 @@
   6,
   75
  ],
- "nouvelle_04": [
-  0,
-  69
- ],
  "nouvelle_06": [
   0,
   115
  ],
  "nouvelle_07": null,
- "nouvelle_08": [
-  0,
-  59
- ],
  "nouvelle_09": [
   0,
   77
@@ -131,7 +111,6 @@
  "nouvelle_11": null,
  "nouvelle_12": null,
  "nouvelle_15": null,
- "nouvelle_16": null,
  "pieuvre_verre": [
   0,
   179
@@ -168,8 +147,5 @@
   0,
   64
  ],
- "siphonophore_bleu": [
-  0,
-  57
- ]
+ "nouvelle_16": null
 }
