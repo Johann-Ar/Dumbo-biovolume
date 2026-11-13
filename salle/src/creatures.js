@@ -259,7 +259,7 @@ const TOUTES = new URLSearchParams(location.search).get('toutes') === '1';
 // SANS MOUVEMENT (demande, 12/11) : chaque animal apparaît en fondu à un endroit, y reste immobile (seule sa vidéo
 // bouge), puis disparaît en fondu. Plus de trajet, de montée, d'approche ni de rotation vers le visiteur.
 // ?mouvement=1 pour revenir aux trajets.
-const FIXE = new URLSearchParams(location.search).get('mouvement') !== '1', FONDU = 1.6;
+const FIXE = new URLSearchParams(location.search).get('mouvement') !== '1', FONDU = 1.6, FONDU_SORTIE = 3;
 export async function addCreatures(scene) {
   if (!document.createElement('video').canPlayType('video/webm; codecs="vp9"')) return null;   // Safari : version HEVC à venir
   const suspens = (new URLSearchParams(location.search).get('fond') ?? 'c') === 'c';   // version actuelle par défaut
@@ -300,7 +300,7 @@ export async function addCreatures(scene) {
     if (pl === null) throw new Error(`${name} : désactivée`);
     info.debut = pl ? pl[0] : 0; info.fin = Math.min(pl ? pl[1] + 1 : N, N);   // fin exclue
     info.images = info.fin - info.debut;
-    if (info.images < 45) throw new Error(`${name} : plage trop courte`);   // < 1,5 s
+    if (info.images < 90) throw new Error(`${name} : plage trop courte`);   // < 3 s : l'animal n'avait pas le temps d'apparaître qu'il repartait (retiré le 13/11, à remplacer par des passages plus longs)
     const video = Object.assign(document.createElement('video'), { src: `${base}.${info.pile === 3 ? 'mp4' : 'webm'}`, muted: true, loop: false, playsInline: true, preload: 'none', crossOrigin: 'anonymous' });
     const tex = new THREE.VideoTexture(video);
     tex.colorSpace = THREE.NoColorSpace; tex.generateMipmaps = false;
@@ -470,9 +470,10 @@ export async function addCreatures(scene) {
   }
 
   const compte = { lances: 0, echecs: 0, vides: 0 };   // contrôle (window.__salle.creatures.compte)
+  const champ = new THREE.Frustum(), matChamp = new THREE.Matrix4(), boule = new THREE.Sphere();   // champ de la caméra
   let debut = null, dernierGrand = -1e9, dernierT = 0; const prochain = { false: 0, true: 0 };   // murs / sol : chacun son rythme
   // Requins : jamais au tout début de la visite (demande, 12/11), seulement après REQUINS secondes   ?requins=0 : dès le début
-  const REQUINS = Number(new URLSearchParams(location.search).get('requins') ?? 90);
+  const REQUINS = Number(new URLSearchParams(location.search).get('requins') ?? 45);
   const permis = (i, age) => !i.c.name.startsWith('requin') || age > REQUINS;
   // Vidéo ENTIÈRE en mémoire (téléchargée d'un bloc, lue depuis la mémoire) : l'animal peut venir, il ira jusqu'au bout
   // sans jamais attendre le réseau. (Le préchargement du navigateur s'arrête à mi-vidéo : 0-4,8 s sur 13 s, mesuré.)
@@ -529,7 +530,7 @@ export async function addCreatures(scene) {
         // Mise en scène : un premier animal tout de suite, puis montée rapide jusqu'au maximum (~35 s), et on s'y tient.
         // Chaque animal ne reste que le temps de sa vidéo (souvent 3 à 8 s) : avant, le suivant arrivait 6 à 13 s plus
         // tard, il n'y en avait presque jamais plus d'un (« 3 créatures en une minute », mesuré en ligne le 12/11).
-        const cible = Math.min(max, (groupe ? [6, 20] : [2, 7, 13, 20, 28, 37]).filter((s) => age > s).length);
+        const cible = Math.min(max, (groupe ? [5, 14] : [2, 5, 9, 14, 19, 25]).filter((s) => age > s).length);
         const actifs = items.filter((i) => i.actif && i.sol === groupe).length;
         if (actifs < cible && t > prochain[groupe]) {
           // seulement des animaux dont la vidéo est DÉJÀ entièrement chargée (préchargées à l'avance, voir chauffe) :
@@ -537,7 +538,7 @@ export async function addCreatures(scene) {
           let libres = items.filter((i) => !i.actif && i.sol === groupe && t > i.libre && permis(i, age) && pretVideo(i) && !items.some((o) => o.actif && o.c.name === i.c.name));
           // un grand animal au moins toutes les ~80 s (le premier arrive tôt) ; sinon, au hasard
           const grands = libres.filter((i) => i.c.grand);
-          if (!groupe && grands.length && t - dernierGrand > 80 && age > 12) libres = grands;
+          if (!groupe && grands.length && t - dernierGrand > 50 && age > 12) libres = grands;   // boucle resserrée (13/11) : 80 → 50 s
           else if (!groupe) libres = libres.filter((i) => !i.c.grand || Math.random() < 0.35);
           if (!libres.length) compte.vides++;
           if (libres.length) {
@@ -552,6 +553,7 @@ export async function addCreatures(scene) {
         }
       }
     }
+    if (camera) { camera.updateMatrixWorld(); matChamp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); champ.setFromProjectionMatrix(matChamp); }
     for (const it of items) {
       if (!it.actif) continue;
       if (!it.pret) {   // vidéo pas encore positionnée au début de sa plage : invisible, l'horloge du passage attend
@@ -562,20 +564,27 @@ export async function addCreatures(scene) {
       const u = (t - it.t0) / it.dur;
       // jamais au-delà de la plage bonne : la vidéo s'arrête sur sa dernière bonne image (le passage se termine avec elle)
       if (it.pret && it.video.currentTime > it.d1 / 30 - 0.04 && !it.video.paused) it.video.pause();
-      if (u >= 1) { it.actif = false; it.boite = null; it.mesh.visible = false; it.libre = t + hasard(25, 50); it.p.set(0, 0, 3); continue; }   // repart, ne revient pas de sitôt
+      if (u >= 1) { it.actif = false; it.boite = null; it.mesh.visible = false; it.libre = t + hasard(12, 25); it.p.set(0, 0, 3); continue; }   // repart ; boucle resserrée (13/11, moins de créatures) : revient plus tôt
       // vitesse constante le long du chemin, adoucie seulement au départ et à l'arrivée (dans le noir) :
       // getPointAt suit la longueur réelle du trajet, sans accélérations d'un tronçon à l'autre
       const e = u < 0.15 ? 0.15 * Math.pow(u / 0.15, 2) / 2 / 0.85 : u > 0.85 ? 1 - 0.15 * Math.pow((1 - u) / 0.15, 2) / 2 / 0.85 : (u - 0.075) / 0.85;
       if (it.fixe) {
         it.p.set(...it.fixe);
-        const f = Math.min(FONDU, it.dur / 4);
-        it.mesh.material.uniforms.uFondu.value = THREE.MathUtils.clamp(Math.min((t - it.t0) / f, (it.t0 + it.dur - t) / f), 0, 1);
+        // disparitions adoucies (demande du 13/11 : « trop brusques ») : sortie plus longue que l'entrée (3 s, au plus 45 %
+        // du passage), et courbe douce (smoothstep) : l'animal s'efface lentement jusqu'au noir, sans chute finale
+        const fe = Math.min(FONDU, it.dur * 0.3), fs = Math.min(FONDU_SORTIE, it.dur * 0.45);
+        const x = THREE.MathUtils.clamp(Math.min((t - it.t0) / fe, (it.t0 + it.dur - t) / fs), 0, 1);
+        it.mesh.material.uniforms.uFondu.value = x * x * (3 - 2 * x);
       } else { it.curve.getPointAt(THREE.MathUtils.clamp(e, 0, 1), it.p); it.mesh.material.uniforms.uFondu.value = 1; }
       place(it.mesh, it.mur, [it.p.x, it.p.y, it.p.z]);
       // vidéo chargée à la demande : rien tant qu'elle n'a pas eu sa première image ; ensuite TOUJOURS visible
       // (un retour en boucle fait brièvement baisser readyState : l'animal clignotait, « petits sauts »)
       if (!it.video.__vue && it.video.readyState >= 2) it.video.__vue = true;
-      it.mesh.visible = !!it.video.__vue;
+      // OPTIMISATION (13/11) : un animal hors du champ de la caméra n'est ni dessiné ni décodé (vidéo en pause, voir plus bas) ;
+      // son passage continue quand même : en revenant dans le champ, la vidéo est recalée là où elle en serait
+      boule.center.copy(it.mesh.position); boule.radius = it.h * 0.6 * Math.max(1, it.info.aspect) + 0.6;
+      it.vu = !camera || champ.intersectsSphere(boule);
+      it.mesh.visible = !!it.video.__vue && it.vu;
       // Volume : relief proportionné à la taille de l'animal (≈ ±0,3 m pour 4 m), et l'animal se tourne un peu
       // vers le visiteur (±35° au plus, en douceur) : de biais, il ne s'aplatit plus comme une image collée sur la vitre.
       it.mesh.scale.set(it.h * (it.flip ? -1 : 1), it.h, it.h * 0.35);
@@ -590,11 +599,16 @@ export async function addCreatures(scene) {
       if (it.mur !== 'sol') it.mesh.rotation.z = (it.c.rot ?? 0) * (it.flip ? -1 : 1);   // corps remis à l'horizontale (image miroir : angle inversé)
       it.mesh.material.uniforms.uSoft.value = THREE.MathUtils.clamp((it.p.z - 0.5) / 2, 0, 1) * 0.8;   // à peine adouci au loin : reste net
     }
-    // seules les vidéos des animaux visibles sont décodées (les autres en pause : la page reste fluide)
+    // seules les vidéos des animaux présents ET dans le champ sont décodées (les autres en pause : la page reste fluide)
     if (debut !== null) for (const v of videos) {
       const actif = items.find((i) => i.actif && i.video === v);
-      const utile = !!actif && actif.pret && v.currentTime < actif.d1 / 30 - 0.04;   // fin de la plage bonne : reste en pause
-      if (utile && v.paused) v.play().catch(() => {});
+      const utile = !!actif && actif.pret && actif.vu !== false && v.currentTime < actif.d1 / 30 - 0.04;   // fin de la plage bonne : reste en pause
+      if (utile && v.paused) {
+        // de retour dans le champ : recalée sur l'horloge du passage (jamais au-delà de la plage bonne)
+        const voulu = Math.min(actif.d0 / 30 + (t - actif.t0), actif.d1 / 30 - 0.05);
+        if (Math.abs(v.currentTime - voulu) > 0.2) { try { v.currentTime = voulu; } catch (e) {} }
+        v.play().catch(() => {});
+      }
       if (utile) {
         const r = 1;   // vitesse fixée au lancement (une seule lecture)
         if (v.playbackRate !== r) v.playbackRate = r;
@@ -616,7 +630,8 @@ export async function addCreatures(scene) {
   const update2 = (t, camera) => { update(t, camera); items.forEach((it, i) => Object.assign(positions[i], { x: it.mesh.position.x, y: it.mesh.position.y, z: it.mesh.position.z, dist: it.actif ? it.p.z : 3 })); };
   // commence(t) : appelé à l'entrée dans la salle (avant, aucune créature)
   // lumière que chaque animal visible jette dans la salle : position, taille, couleur, force (proche de la vitre = fort)
-  const lumieres = () => items.filter((i) => i.actif && i.mesh.visible).map((i) => ({ pos: i.mesh.position, h: i.h, c: i.teinte,
+  // hors champ aussi : la lueur d'un animal dans le dos peut tomber dans le champ
+  const lumieres = () => items.filter((i) => i.actif && i.pret && i.video.__vue).map((i) => ({ pos: i.mesh.position, h: i.h, c: i.teinte,
     k: THREE.MathUtils.clamp(1 - (i.p.z - 0.4) / 2.6, 0, 1) * i.mesh.material.uniforms.uFondu.value })).sort((a, b) => b.k * b.h - a.k * a.h);
   return { update: update2, commence: (t) => { if (debut === null) debut = t; }, positions, videos, lumieres, items, premieres, compte };
 }
