@@ -65,6 +65,17 @@ const ESPECES = [
   { name: 'meduse_pourpre', h: 3.4, v: 0.04, relief: 0.2, murs: MURS },
   { name: 'ctenophore', h: 3.2, v: 0.2, relief: 0.2, murs: MURS },
   { name: 'meduse_rouge', h: 3.6, v: 0.05, relief: 0.25, murs: MURS },
+  // Méduse rouge en dérive (plan long de 37 s pris dans la plongée complète, pleine eau)
+  { name: 'meduse_rouge_derive', h: 3.4, v: 0.05, relief: 0.25, murs: MURS },
+  // Plans longs (14/11) retrouvés dans les plongées complètes par DINOv2, incrustations du direct effacées lettre par lettre
+  // (l'animal passe dessous sans être coupé) ; les anciens clips de ces 4 espèces avaient moins de 3 s propres
+  { name: 'cirrate_blanc_long_a', h: 3.8, v: 0.06, relief: 0.3, murs: MURS },
+  { name: 'cirrate_blanc_long_b', h: 3.8, v: 0.06, relief: 0.3, murs: MURS },
+  { name: 'calmar_bras_long_a', h: 4.9, v: 0.35, relief: 0.25, murs: ['gauche', 'droite'], grand: true },
+  { name: 'calmar_bras_long_b', h: 4.9, v: 0.35, relief: 0.25, murs: ['gauche', 'droite'], grand: true },
+  { name: 'cirrate_rouge_long', h: 3.8, v: 0.06, relief: 0.3, murs: MURS },
+  { name: 'calmar_transparent_long_a', h: 3.5, v: 0.15, relief: 0.2, murs: MURS },
+  { name: 'calmar_transparent_long_b', h: 3.5, v: 0.15, relief: 0.2, murs: MURS },
   { name: 'araignee_mer', h: 4.5, v: 0.05, relief: 0.3, murs: MURS },
   // nouvelles (lot SAM 2, plans « pélagiques » de nos vidéos ; espèce à identifier sur l'aperçu) : ignorées tant que pas prêtes
   { name: 'nouvelle_01', h: 4.5, v: 0.07, relief: 0.25, murs: MURS },
