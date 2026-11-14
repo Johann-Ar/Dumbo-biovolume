@@ -94,6 +94,10 @@ const ESPECES = [
   { name: 'nouvelle_14', h: 4.5, v: 0.07, relief: 0.25, murs: MURS },
   { name: 'nouvelle_15', h: 5.5, v: 0.07, relief: 0.25, murs: MURS, grand: true },
   { name: 'nouvelle_16', h: 4.5, v: 0.07, relief: 0.25, murs: MURS },
+  // poulpe rouge à cloche bleue (celui de l'écran du milieu de la version d'origine), refait le 15/11 depuis la plongée
+  // entière : deux passages propres de 16 s (avant/après le moment où ses bras sortent de l'image)
+  { name: 'poulpe_cloche_a', h: 4.5, v: 0.07, relief: 0.25, murs: MURS },
+  { name: 'poulpe_cloche_b', h: 4.5, v: 0.07, relief: 0.25, murs: MURS },
   // 4K de l'ancien projet (disque T7, VideoMatting/final, déjà détourées) : lot sources-creatures/lot_t7.sh ; ignorées tant que pas prêtes
   { name: 'meduse_globe_rouge', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'pieuvre_verre', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },

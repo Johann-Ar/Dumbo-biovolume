@@ -1664,5 +1664,15 @@
    0.069,
    0.105
   ]
+ },
+ "poulpe_cloche_a": {
+  "px": 996,
+  "utile": 996,
+  "nettete": 1.808
+ },
+ "poulpe_cloche_b": {
+  "px": 996,
+  "utile": 996,
+  "nettete": 1.808
  }
 }
