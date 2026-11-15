@@ -138,6 +138,7 @@ const ESPECES = [
   { name: 'meduse_noire', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'poisson_lance', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
   { name: 'salpe_bleue', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
+  // refaite le 15/11 depuis la plongée entière : 29 s propres (avant : 3 s)
   { name: 'meduse_ombrelle_lilas', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'meduse_bleue', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'requin_gris', h: 5.5, v: 0.35, relief: 0.3, murs: ['gauche', 'droite'], grand: true },
