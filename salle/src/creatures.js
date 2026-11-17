@@ -138,6 +138,11 @@ const ESPECES = [
   { name: 'meduse_noire', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'poisson_lance', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
   { name: 'salpe_bleue', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
+  // nouvelles espèces trouvées le 17/11 en cherchant les versions longues dans les plongées entières (16 à 26 s propres)
+  { name: 'meduse_violette', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
+  { name: 'hydromeduse_anneau', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
+  { name: 'gelatineux_filaments', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
+  { name: 'poisson_lanterne', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
   // refaite le 15/11 depuis la plongée entière : 29 s propres (avant : 3 s)
   { name: 'meduse_ombrelle_lilas', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'meduse_bleue', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },

@@ -1662,5 +1662,25 @@
   "px": 996,
   "utile": 996,
   "nettete": 1.808
+ },
+ "gelatineux_filaments": {
+  "px": 708,
+  "utile": 708,
+  "nettete": 1.189
+ },
+ "hydromeduse_anneau": {
+  "px": 1058,
+  "utile": 1058,
+  "nettete": 1.954
+ },
+ "meduse_violette": {
+  "px": 768,
+  "utile": 768,
+  "nettete": 1.015
+ },
+ "poisson_lanterne": {
+  "px": 572,
+  "utile": 572,
+  "nettete": 1.379
  }
 }
