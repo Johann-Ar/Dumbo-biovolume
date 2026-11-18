@@ -99,6 +99,7 @@ const ESPECES = [
   { name: 'poulpe_cloche_a', h: 4.5, v: 0.07, relief: 0.25, murs: MURS },
   { name: 'poulpe_cloche_b', h: 4.5, v: 0.07, relief: 0.25, murs: MURS },
   // 4K de l'ancien projet (disque T7, VideoMatting/final, déjà détourées) : lot sources-creatures/lot_t7.sh ; ignorées tant que pas prêtes
+  // refaite le 18/11 depuis la plongée entière : 37.0 s propres
   { name: 'meduse_globe_rouge', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'pieuvre_verre', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
   { name: 'calmar_lance', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
@@ -151,6 +152,7 @@ const ESPECES = [
   { name: 'calmar_ailes', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
   { name: 'chimere_face', h: 4.6, v: 0.2, relief: 0.3, murs: ['gauche', 'droite'], grand: true },
   { name: 'requin_lutin', h: 5.8, v: 0.35, relief: 0.3, murs: ['gauche', 'droite'], grand: true },
+  // refaite le 18/11 depuis la plongée entière : 15.1 s propres
   { name: 'chabot_bleu', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
   { name: 'requin_gris_b', h: 5.5, v: 0.35, relief: 0.3, murs: ['gauche', 'droite'], grand: true },
   { name: 'calmar_beige', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
