@@ -144,6 +144,8 @@ const ESPECES = [
   { name: 'hydromeduse_anneau', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'gelatineux_filaments', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'poisson_lanterne', h: 4.0, v: 0.15, relief: 0.3, murs: MURS },
+  // petit calmar rond rouge sombre à glande orange (type calmar de verre), récolté dans la plongée wtMX1Q3p_Ow le 18/11 : 45 s propres
+  { name: 'calmar_rond_rouge', h: 4.5, v: 0.15, relief: 0.3, murs: MURS },
   // refaite le 15/11 depuis la plongée entière : 29 s propres (avant : 3 s)
   { name: 'meduse_ombrelle_lilas', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
   { name: 'meduse_bleue', h: 3.8, v: 0.05, relief: 0.25, murs: MURS },
