@@ -1663,5 +1663,10 @@
   "px": 856,
   "utile": 856,
   "nettete": 0.806
+ },
+ "calmar_verre_ovale": {
+  "px": 780,
+  "utile": 780,
+  "nettete": 0.992
  }
 }
